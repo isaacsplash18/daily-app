@@ -1,651 +1,287 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Daily" />
-  <meta name="theme-color" content="#0f0f0f" />
-  <title>Daily</title>
-  <link rel="manifest" href="manifest.json" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0f0f0f;
-      --surface: #141414;
-      --surface2: #1a1a1a;
-      --border: #222;
-      --gold: #c8a96e;
-      --green: #6dbf6d;
-      --blue: #4a9eff;
-      --text: #f0ede6;
-      --muted: #888;
-      --dim: #444;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
-
-    html, body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    #app {
-      max-width: 480px;
-      margin: 0 auto;
-      padding-bottom: calc(90px + var(--safe-bottom));
-    }
-
-    .header {
-      padding: 52px 24px 0;
-    }
-
-    .day-label {
-      font-size: 10px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--dim);
-    }
-
-    .date-label {
-      font-family: 'Playfair Display', serif;
-      font-size: 26px;
-      font-weight: 700;
-      margin-top: 4px;
-      color: var(--text);
-    }
-
-    .streak-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .streak-badge {
-      background: var(--gold);
-      color: #0f0f0f;
-      border-radius: 99px;
-      padding: 4px 12px;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-    }
-
-    .streak-badge.empty {
-      background: var(--surface2);
-      color: var(--dim);
-    }
-
-    .habit-count {
-      font-size: 12px;
-      color: var(--dim);
-    }
-
-    .progress-wrap {
-      padding: 16px 24px 0;
-    }
-
-    .progress-track {
-      height: 3px;
-      background: var(--surface2);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.4s ease;
-    }
-
-    .progress-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: var(--dim);
-      margin-top: 6px;
-    }
-
-    .nav {
-      display: flex;
-      gap: 2px;
-      margin: 20px 24px 0;
-      background: var(--surface2);
-      border-radius: 12px;
-      padding: 3px;
-    }
-
-    .nav-btn {
-      flex: 1;
-      padding: 8px 0;
-      border-radius: 9px;
-      border: none;
-      background: transparent;
-      color: var(--dim);
-      cursor: pointer;
-      font-size: 12px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 400;
-      letter-spacing: 0;
-      transition: all 0.2s;
-    }
-
-    .nav-btn.active {
-      background: var(--text);
-      color: var(--bg);
-      font-weight: 500;
-    }
-
-    .content {
-      padding: 20px 24px 0;
-    }
-
-    .group-label {
-      font-size: 9px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--dim);
-      margin-bottom: 8px;
-      margin-top: 22px;
-    }
-
-    .habit-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 16px;
-      border-radius: 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      margin-bottom: 7px;
-      cursor: pointer;
-      transition: all 0.2s;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-
-    .habit-row.checked {
-      background: #1a2a1a;
-      border-color: #2d4a2d;
-    }
-
-    .habit-row:active {
-      transform: scale(0.98);
-    }
-
-    .habit-icon {
-      font-size: 17px;
-      width: 22px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .habit-text {
-      font-size: 13px;
-      color: var(--muted);
-      flex: 1;
-      line-height: 1.3;
-    }
-
-    .habit-row.checked .habit-text {
-      color: var(--green);
-    }
-
-    .checkmark {
-      width: 20px;
-      height: 20px;
-      border-radius: 6px;
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: all 0.2s;
-    }
-
-    .habit-row.checked .checkmark {
-      background: var(--green);
-      border-color: var(--green);
-    }
-
-    .complete-banner {
-      background: linear-gradient(135deg, #1a2a1a, #0f1f0f);
-      border: 1px solid #2d4a2d;
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .complete-banner .star { font-size: 22px; margin-bottom: 4px; }
-    .complete-banner .title { font-size: 14px; color: var(--green); font-weight: 500; }
-    .complete-banner .sub { font-size: 11px; color: #4a7a4a; margin-top: 4px; }
-
-    .section {
-      margin-top: 28px;
-    }
-
-    .section-title {
-      font-size: 9px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--dim);
-      margin-bottom: 6px;
-    }
-
-    .section-hint {
-      font-size: 11px;
-      color: var(--dim);
-      font-style: italic;
-      margin-bottom: 14px;
-      line-height: 1.5;
-    }
-
-    .win-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .win-num {
-      font-size: 11px;
-      color: var(--gold);
-      font-weight: 500;
-      margin-top: 11px;
-      width: 14px;
-      flex-shrink: 0;
-    }
-
-    textarea {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      resize: none;
-      line-height: 1.5;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    textarea:focus {
-      border-color: var(--gold);
-    }
-
-    textarea::placeholder { color: var(--dim); }
-
-    .save-btn {
-      margin-top: 12px;
-      padding: 11px 24px;
-      background: var(--gold);
-      color: #0f0f0f;
-      border: none;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 500;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer;
-      transition: background 0.3s;
-      letter-spacing: 0.5px;
-    }
-
-    .save-btn.saved { background: var(--green); }
-
-    .weekly-q { margin-bottom: 20px; }
-
-    .weekly-label {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      font-style: italic;
-      line-height: 1.5;
-    }
-
-    .history-day {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid #1a1a1a;
-    }
-
-    .history-date { font-size: 13px; color: var(--muted); }
-
-    .history-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .history-track {
-      width: 80px;
-      height: 4px;
-      background: var(--surface2);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-
-    .history-fill {
-      height: 100%;
-      border-radius: 99px;
-    }
-
-    .history-pct {
-      font-size: 11px;
-      width: 30px;
-      text-align: right;
-    }
-
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(15,15,15,0.95);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border);
-      padding: 10px 0 calc(10px + var(--safe-bottom));
-      display: flex;
-      justify-content: center;
-      gap: 2px;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    .tab-hint {
-      font-size: 10px;
-      color: var(--dim);
-      text-align: center;
-      padding: 20px 0 8px;
-      font-style: italic;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="apple-mobile-web-app-title" content="Strength" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icon.svg" />
+<title>Strength System</title>
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#171717; --panel2:#1f1f1f; --line:#2a2a2a;
+    --ink:#e5e5e5; --ink2:#a3a3a3; --ink3:#737373; --ink4:#525252;
+    --amber:#fbbf24; --red:#f87171; --green:#34d399; --sky:#38bdf8;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    padding:24px 16px calc(40px + env(safe-area-inset-bottom));}
+  .wrap{max-width:480px;margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--amber)}
+  h1{margin:4px 0 0;font-size:26px;letter-spacing:-.02em;color:#fafafa}
+  .lead{margin:6px 0 0;font-size:12px;color:var(--ink3)}
+  .card{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;margin-top:16px}
+  .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)}
+  .maxes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .maxes label{display:block}
+  .maxes span{display:block;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);margin-bottom:4px}
+  input{font-family:var(--mono);background:var(--bg);border:1px solid #3a3a3a;border-radius:6px;
+    color:var(--ink);text-align:center;padding:8px 2px;width:100%;font-size:14px}
+  input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+  .maxes input{color:var(--amber);font-weight:700}
+  .strip{display:flex;gap:6px;overflow-x:auto;padding:16px 0 4px;-webkit-overflow-scrolling:touch}
+  .wk{position:relative;flex:0 0 auto;width:40px;height:48px;border:1px solid var(--line);background:var(--panel);
+    border-radius:9px;color:var(--ink2);font-weight:600;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:4px;cursor:pointer;font-family:var(--mono)}
+  .wk.active{background:var(--amber);border-color:var(--amber);color:#0a0a0a}
+  .dot{width:4px;height:4px;border-radius:50%}
+  .wk .plane{position:absolute;top:3px;right:4px;font-size:9px;color:var(--sky);font-family:var(--sans)}
+  .wkhead{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+  .badge{border:1px solid;border-radius:5px;padding:2px 6px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.15em;text-transform:uppercase;margin-left:8px}
+  .btn{border:1px solid #3a3a3a;background:transparent;color:var(--ink2);border-radius:9px;
+    padding:8px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+  .btn.travel-on{border-color:var(--sky);background:rgba(56,189,248,.12);color:#7dd3fc}
+  .tbanner{border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.06);border-radius:9px;
+    padding:12px;font-size:12px;color:#bae6fd;margin-top:16px}
+  .sched{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:6px;margin-top:16px}
+  .srow{display:flex;align-items:center;gap:10px;padding:8px}
+  .srow .d{width:34px;font-family:var(--mono);font-size:12px;color:var(--ink3)}
+  .srow .a{font-size:14px}
+  .srow .s{font-size:12px;color:var(--ink4)}
+  .srow.trow{background:rgba(56,189,248,.06);border-radius:8px}
+  .srow.trow .a{color:var(--sky)}
+  .planebtn{margin-left:auto;flex:none;width:28px;height:28px;border:1px solid #2a2a2a;background:transparent;
+    color:var(--ink4);border-radius:7px;font-size:13px;cursor:pointer;line-height:1}
+  .planebtn.on{border-color:var(--sky);background:rgba(56,189,248,.12);color:#7dd3fc}
+  .hint{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4)}
+  .tflag{color:var(--sky);font-size:11px;font-weight:600}
+  .day{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;margin-top:16px}
+  .dhead{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+  .main{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .main:first-of-type{border-top:none;padding-top:0;margin-top:0}
+  .mtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .mname{font-size:14px;font-weight:600;color:var(--ink)}
+  .mspec{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-top:2px}
+  .wt{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber);line-height:1;text-align:right}
+  .wt.peak{color:var(--red)}
+  .unit{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink4);text-align:right;margin-top:2px}
+  .mnote{font-size:12px;color:var(--ink2);margin-top:6px}
+  .fallback{font-size:12px;color:var(--ink2);margin-top:6px}
+  .fallback b{color:var(--ink);font-weight:600}
+  .logrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .logrow input{width:56px}
+  .setn{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);width:38px}
+  input::placeholder{color:var(--ink4)}
+  .x{font-family:var(--mono);color:var(--ink4);font-size:12px}
+  .acc{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+  .acc li{font-size:12px;color:var(--ink2);list-style:none;padding:3px 0}
+  .acctop{display:flex;justify-content:space-between}
+  .accstart{font-family:var(--mono);font-size:10px;color:var(--ink4);margin-top:1px}
+  .accnote{font-size:10px;color:var(--ink4);margin:4px 0 4px}
+  .acc ul{margin:6px 0 0;padding:0}
+  .acc .p{font-family:var(--mono);color:var(--ink3)}
+  .accswap{font-size:12px;color:var(--ink3);margin-top:8px}
+  .warm{border:1px solid var(--line);background:#0d0d0d;border-radius:9px;padding:10px 12px;margin-bottom:14px}
+  .warmh{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);opacity:.85}
+  .warmi{font-size:12px;color:var(--ink);margin-top:4px}
+  .warms{font-size:12px;color:var(--ink3);margin-top:4px}
+  .ramp{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:6px}
+  .ramp b{color:var(--ink2);font-weight:600}
+  .ref{border:1px solid var(--line);background:var(--panel);border-radius:12px;margin-top:16px}
+  .ref>button{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;
+    border:none;color:var(--ink2);padding:16px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .refbody{padding:0 16px 16px}
+  .ref h4{margin:0 0 4px;font-size:13px;color:var(--ink)}
+  .ref p{margin:0 0 14px;font-size:12px;color:var(--ink2);line-height:1.5}
+  .ref p:last-child{margin-bottom:0}
+  .reset{display:block;margin:18px auto 0;background:none;border:none;color:var(--ink4);font-size:12px;cursor:pointer}
+  .btnrow{display:flex;gap:18px;justify-content:center;margin-top:18px}
+  .btnrow .reset{margin:0}
+  .copybtn{margin-top:14px;width:100%;background:transparent;border:1px solid #2a2a2a;color:var(--ink2);
+    border-radius:9px;padding:9px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+  .copybtn:active{border-color:var(--amber);color:var(--amber)}
+  .foot{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#404040;margin-top:18px}
+  .g{color:var(--green)} .a{color:var(--amber)} .r{color:var(--red)}
+</style>
 </head>
 <body>
-<div id="app"></div>
-
+<div class="wrap" id="app"></div>
 <script>
-const HABITS = [
-  { id: "gym", label: "CrossFit / movement", icon: "💪", time: "morning" },
-  { id: "breakfast", label: "Real breakfast with protein", icon: "🥚", time: "morning" },
-  { id: "deepwork", label: "Morning deep work block", icon: "🧠", time: "morning" },
-  { id: "onepriority", label: "One clear priority done", icon: "✦", time: "day" },
-  { id: "nophone", label: "Lunch break away from screen", icon: "☀️", time: "day" },
-  { id: "dogwalk", label: "Evening walk with dogs & Rach", icon: "🐾", time: "evening" },
-  { id: "dailythree", label: "Wrote my three wins", icon: "📝", time: "evening" },
-  { id: "midnight", label: "In bed by midnight", icon: "🌙", time: "night" },
-];
+const WEEKS=[
+ {n:1,phase:"Build",pct:.675},{n:2,phase:"Build",pct:.70},{n:3,phase:"Build",pct:.725},
+ {n:4,phase:"Deload",pct:.60},{n:5,phase:"Strength",pct:.75},{n:6,phase:"Strength",pct:.775},
+ {n:7,phase:"Strength",pct:.80},{n:8,phase:"Deload",pct:.65},{n:9,phase:"Peak",pct:.825},
+ {n:10,phase:"Peak",pct:.85},{n:11,phase:"Peak",pct:.875},{n:12,phase:"Retest",pct:.80}];
+const _n="";
+const LIFTS={
+ squat:{name:"Back squat",rm:"squat",fallback:"Goblet or Bulgarian split squat — 3 × 10–12 / leg @ RPE 8",
+   sr:["4 × 6","4 × 6","4 × 5","3 × 5","4 × 4","4 × 4","4 × 3","3 × 4","3 × 3","3 × 2","Top 2","3×3 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Technique focus. Crisp.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 5 back-off @ 72.5%","New top single/triple if good, then update your max. Else 3×3."]},
+ bench:{name:"Bench press",rm:"bench",fallback:"Push-ups or DB floor press — 3 sets, stop 2 reps short @ RPE 8",
+   sr:["3 × 8","3 × 8","3 × 6","3 × 6","4 × 5","4 × 5","4 × 4","3 × 5","4 × 4","4 × 3","Top 3","3×4 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Technique focus.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 6 back-off @ 72.5%","New top triple if good, then update your max. Else 3×4."]},
+ deadlift:{name:"Deadlift",rm:"deadlift",fallback:"DB Romanian or single-leg RDL — 3 × 10–12 @ RPE 8",
+   sr:["3 × 5","3 × 5","3 × 4","2 × 5","3 × 3","3 × 3","3 × 3","2 × 4","2 × 3","2 × 2","Top 2","2×3 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Low volume by design.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 3 back-off @ 75%","New top single/double if good, then update your max. Else 2×3."]},
+ ohp:{name:"Overhead press",rm:"ohp",fallback:"Pike push-up or DB shoulder press — 3 × 8–12 @ RPE 8",
+   sr:["3 × 8","3 × 8","3 × 6","3 × 6","4 × 5","4 × 5","4 × 4","3 × 5","4 × 4","4 × 3","Top 3","3×4 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Technique focus.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 6 back-off @ 72.5%","New top triple if good, then update your max. Else 3×4."]}};
+const ACC_A=[["Chin-up or lat pulldown","3 × 6–10","BW / ~45kg pulldown"],["Face pulls","2–3 × 12–15","~15–20kg or band"],["Rear-delt raise","2 × 12–15","4–6kg"],["Pallof press","3 × 10 / side","~10–15kg or band"]];
+const ACC_B=[["Barbell row","3 × 6–10","~40kg"],["Bulgarian split squat (paused)","2–3 × 8–10 / leg","BW–2×10kg"],["Cuff external rotation","2 × 12–15","2–4kg or band"],["Pull-up","3 × 5–10","BW · band-assist or +load to fit reps"],["Single-arm suitcase carry","2–3 × 30 m / side","16–24kg"]];
+const PHASE={Build:"#a3a3a3",Strength:"var(--amber)",Peak:"var(--red)",Deload:"var(--green)",Retest:"var(--red)"};
+const DEFAULT={squat:100,bench:65,deadlift:110,ohp:40};
 
-const WEEKLY_QS = [
-  { id: "w1", label: "What did I do this week that aligned with who I want to be?" },
-  { id: "w2", label: "One thing I want to do differently next week?" },
-  { id: "w3", label: "What am I carrying that I need to put down?" },
-];
+let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false};
+try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
+function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
-const WIN_PLACEHOLDERS = [
-  "Something that went well today...",
-  "A moment you were present...",
-  "Something small you're grateful for..."
-];
+const r25=v=>Math.round(v/2.5)*2.5;
+const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
+function ramp(W){if(!W)return[];const out=["bar × 8"];let last=20;[[0.5,5],[0.7,3],[0.85,2]].forEach(function(s){const x=r25(W*s[0]);if(x>20&&x<W&&x!==last){out.push(fmt(x)+" × "+s[1]);last=x;}});return out;}
+function parseSR(sr){var mx=sr.match(/(\d+)\s*[×x]\s*(\d+)/);if(mx)return{sets:+mx[1],reps:+mx[2]};var top=sr.match(/[Tt]op\s*(\d+)/);if(top)return{sets:1,reps:+top[1]};return{sets:1,reps:0};}
+var DAYPLAN={Tue:{title:"Deadlift",mains:["deadlift","ohp"]},Thu:{title:"Squat",mains:["squat","bench"]}};
+function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
+function sessionText(day,title,mains){var out="Week "+S.week+" · "+day+" · "+title,any=false;mains.forEach(function(k){var L=LIFTS[k],lg=S.logs[S.week+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length){any=true;out+="\n"+L.name+": "+parts.join(", ");}});return any?out:out+"\nNo sets logged yet.";}
+function fullLogText(){var out="Strength System — training log",found=false;for(var wk=1;wk<=WEEKS.length;wk++){var wl="";[["Tue","Deadlift",["deadlift","ohp"]],["Thu","Squat",["squat","bench"]]].forEach(function(g){var ln="";g[2].forEach(function(k){var L=LIFTS[k],lg=S.logs[wk+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length)ln+="\n    "+L.name+": "+parts.join(", ");});if(ln)wl+="\n  "+g[0]+" · "+g[1]+ln;});if(wl){found=true;out+="\n\nWeek "+wk+wl;}}return found?out:"Nothing logged yet.";}
+function flash(btn){if(!btn)return;var t=btn.getAttribute("data-lbl")||btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=t;},1200);}
+function copyText(txt,btn){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){flash(btn);},function(){window.prompt("Copy your log:",txt);});}else{window.prompt("Copy your log:",txt);}}catch(e){window.prompt("Copy your log:",txt);}}
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-function getTodayKey() {
-  return new Date().toISOString().split("T")[0];
+function weightCell(k){
+  const w=WEEKS[S.week-1], rm=Number(S.oneRMs[k]);
+  if(!rm) return "—";
+  return fmt(r25(rm*w.pct));
 }
-
-function getWeekKey() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d);
-  monday.setDate(diff);
-  return monday.toISOString().split("T")[0];
-}
-
-function getDateStr() {
-  return new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
-}
-
-function isSunday() { return new Date().getDay() === 0; }
-
-function loadData(key) {
-  try { return JSON.parse(localStorage.getItem(key)) || {}; } catch(e) { return {}; }
-}
-
-function saveData(key, data) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
-}
-
-function getStreak() {
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 60; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = "habits_" + d.toISOString().split("T")[0];
-    const data = loadData(key);
-    const count = Object.values(data).filter(Boolean).length;
-    if (count >= 5) { streak++; }
-    else if (i > 0) { break; }
-  }
-  return streak;
-}
-
-// STATE
-let state = {
-  view: "daily",
-  habits: {},
-  wins: ["", "", ""],
-  weekly: {},
-  saved: false,
-  savedTimer: null,
-};
-
-function loadToday() {
-  state.habits = loadData("habits_" + getTodayKey());
-  state.wins = loadData("wins_" + getTodayKey()).list || ["", "", ""];
-  state.weekly = loadData("weekly_" + getWeekKey());
-}
-
-loadToday();
-
-function render() {
-  const todayKey = getTodayKey();
-  const checkedCount = Object.values(state.habits).filter(Boolean).length;
-  const total = HABITS.length;
-  const pct = Math.round((checkedCount / total) * 100);
-  const streak = getStreak();
-
-  const progressColor = pct === 100 ? "#c8a96e" : "#4a9eff";
-
-  document.getElementById("app").innerHTML = `
-    <div class="header">
-      <p class="day-label">Daily Check-in</p>
-      <h1 class="date-label">${getDateStr()}</h1>
-      <div class="streak-row">
-        <span class="streak-badge ${streak === 0 ? 'empty' : ''}">
-          ${streak > 0 ? `🔥 ${streak} day streak` : "Start your streak today"}
-        </span>
-        <span class="habit-count">${checkedCount}/${total} habits</span>
-      </div>
+function mainHTML(k,trav){
+  const L=LIFTS[k], w=WEEKS[S.week-1], i=S.week-1;
+  const peak=(w.phase==="Peak"||w.phase==="Retest");
+  const key=S.week+":"+k, log=S.logs[key]||{};
+  const note=L.note[i];
+  const rmv=Number(S.oneRMs[L.rm]); const W=rmv?r25(rmv*w.pct):0;
+  return `<div class="main">
+    <div class="mtop">
+      <div><div class="mname">${L.name}</div>
+      <div class="mspec">${L.sr[i]} · ${Math.round(w.pct*100)}% · RPE ${L.rpe[i]}</div></div>
+      <div><div class="wt ${peak?'peak':''}" id="wt-${k}">${weightCell(k)}</div><div class="unit">kg</div></div>
     </div>
-
-    <div class="progress-wrap">
-      <div class="progress-track">
-        <div class="progress-fill" style="width:${pct}%; background:${progressColor};"></div>
-      </div>
-      <div class="progress-labels">
-        <span>${pct}% complete</span>
-        <span>${pct === 100 ? "✦ Perfect day" : `${total - checkedCount} to go`}</span>
-      </div>
-    </div>
-
-    <div class="nav">
-      <button class="nav-btn ${state.view === 'daily' ? 'active' : ''}" onclick="setView('daily')">Daily</button>
-      <button class="nav-btn ${state.view === 'weekly' ? 'active' : ''}" onclick="setView('weekly')">Weekly</button>
-      <button class="nav-btn ${state.view === 'history' ? 'active' : ''}" onclick="setView('history')">History</button>
-    </div>
-
-    <div class="content">
-      ${state.view === 'daily' ? renderDaily(pct) : ''}
-      ${state.view === 'weekly' ? renderWeekly() : ''}
-      ${state.view === 'history' ? renderHistory() : ''}
-    </div>
-  `;
-}
-
-function renderDaily(pct) {
-  const groups = ["morning", "day", "evening", "night"];
-  const labels = { morning: "Morning", day: "Day", evening: "Evening", night: "Night" };
-
-  let html = "";
-
-  if (pct === 100) {
-    html += `<div class="complete-banner">
-      <div class="star">✦</div>
-      <div class="title">Perfect Day</div>
-      <div class="sub">Every habit done. This is the work.</div>
-    </div>`;
-  }
-
-  groups.forEach(group => {
-    const groupHabits = HABITS.filter(h => h.time === group);
-    html += `<p class="group-label">${labels[group]}</p>`;
-    groupHabits.forEach(habit => {
-      const checked = !!state.habits[habit.id];
-      html += `
-        <div class="habit-row ${checked ? 'checked' : ''}" onclick="toggleHabit('${habit.id}')">
-          <span class="habit-icon">${habit.icon}</span>
-          <span class="habit-text">${habit.label}</span>
-          <div class="checkmark">
-            ${checked ? `<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0f0f0f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}
-          </div>
-        </div>`;
-    });
-  });
-
-  html += `<div class="section">
-    <p class="section-title">Today's three wins</p>
-    <p class="section-hint">Small things that went okay — not big wins, just evidence you showed up.</p>
-    ${[0,1,2].map(i => `
-      <div class="win-row">
-        <span class="win-num">${i+1}.</span>
-        <textarea rows="2" placeholder="${WIN_PLACEHOLDERS[i]}" 
-          oninput="updateWin(${i}, this.value)">${escHtml(state.wins[i] || '')}</textarea>
-      </div>`).join("")}
-    <button class="save-btn ${state.saved ? 'saved' : ''}" onclick="saveWins()">
-      ${state.saved ? "Saved ✓" : "Save wins"}
-    </button>
+    ${note?`<div class="mnote">${esc(note)}</div>`:""}
+    ${(W&&!trav)?`<div class="ramp">Ramp: ${ramp(W).join("  →  ")}  →  <b>work</b></div>`:""}
+    ${trav?`<div class="fallback"><b>Barbell if available.</b> Otherwise: ${esc(L.fallback)}</div>`:""}
+    ${(function(){var pr=parseSR(L.sr[i]);var wl=log.sets||[];var rows="";for(var si=0;si<pr.sets;si++){var st=wl[si]||{};rows+='<div class="logrow"><span class="setn">Set '+(si+1)+'</span><input inputmode="decimal" placeholder="'+(W?fmt(W):'kg')+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+(pr.reps||'reps')+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}return rows;})()}
   </div>`;
+}
+function dayHTML(day,title,mains,acc,swap){
+  const trav=!!S.travel[S.week+":"+day];
+  return `<div class="day"><div class="dhead">${day} · ${title}${trav?' <span class="tflag">✈ travel</span>':''}</div>
+    <div class="warm"><div class="warmh">Warm-up first</div>
+      <div class="warmi"><b>1.</b> McGill Big 3 — curl-up, side plank, bird dog (activation)</div>
+      <div class="warmi"><b>2.</b> Ramp each lift to its working weight (shown per lift below)</div>
+      <div class="warms">Then your working sets, then accessories.</div></div>
+    ${mains.map(k=>mainHTML(k,trav)).join("")}
+    <div class="acc"><div class="lbl">Accessories</div>
+      <div class="accnote">Starting loads to calibrate from. Run at RPE 8, never to failure. Add the smallest jump once you top the rep range.</div>
+      <ul>${acc.map(a=>`<li><div class="acctop"><span>${a[0]}</span><span class="p">${a[1]}</span></div>${a[2]?`<div class="accstart">start ${a[2]}</div>`:""}</li>`).join("")}</ul>
+      ${trav?`<div class="accswap">✈ ${esc(swap)}</div>`:""}
+    </div>
+    <button class="copybtn" data-copy="${day}" data-lbl="Copy this session">Copy this session</button></div>`;
+}
+function render(){
+  const w=WEEKS[S.week-1];
+  const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const dayT=d=>!!S.travel[S.week+":"+d];
+  const anyT=DAYS.some(dayT);
+  const weekT=n=>Object.keys(S.travel).some(k=>k.indexOf(n+":")===0&&S.travel[k]);
+  const sched=[
+    ["Mon","Boxing — technical","lighter, day after the run","Shadowboxing","6–8 × 3-min rounds","var(--ink2)"],
+    ["Tue","Lift B","deadlift day","Lift B","deadlift — travel option in card","var(--amber)"],
+    ["Wed","Boxing","","Shadowboxing","6–8 × 3-min rounds","var(--ink2)"],
+    ["Thu","Lift A","squat day","Lift A","squat — travel option in card","var(--amber)"],
+    ["Fri","HIIT / crossfit","your hard one","Bodyweight circuit","5 rounds, hard","var(--ink2)"],
+    ["Sat","Rest","","Rest","","var(--ink4)"],
+    ["Sun","Hard run","evening, with the group","Run, easy","keep it aerobic","var(--green)"]];
+  document.getElementById("app").innerHTML=`
+  <div class="eyebrow">Strength System</div>
+  <h1>The Block</h1>
+  <p class="lead">Evenings, around your Brothers classes. Earn the bar. Beat last week.</p>
 
-  return html;
+  <div class="card"><div class="lbl">Your current 1RM · everything recalculates</div>
+    <div class="maxes">
+      ${[["squat","Squat"],["bench","Bench"],["deadlift","Dead"],["ohp","OHP"]].map(m=>
+        `<label><span>${m[1]}</span><input inputmode="decimal" data-rm="${m[0]}" value="${S.oneRMs[m[0]]??''}"></label>`).join("")}
+    </div></div>
+
+  <div class="strip">${WEEKS.map(wk=>{
+    const a=wk.n===S.week, t=weekT(wk.n);
+    return `<button class="wk ${a?'active':''}" data-week="${wk.n}">
+      <span>${wk.n}</span><span class="dot" style="background:${a?'#0a0a0a':PHASE[wk.phase]}"></span>
+      ${t?'<span class="plane">✈</span>':''}</button>`;}).join("")}</div>
+
+  <div class="wkhead">
+    <div><b>Week ${S.week}</b><span class="badge" style="color:${PHASE[w.phase]};border-color:${PHASE[w.phase]}">${w.phase}</span></div>
+    <span class="hint">tap ✈ on a day to mark travel</span>
+  </div>
+  ${anyT?`<div class="tbanner">Maintain, don't chase PBs. Keep the run, keep the pattern, keep the streak. The days you flagged are swapped for things you can do in any hotel.</div>`:""}
+
+  <div class="sched">${sched.map(s=>{
+    const d=s[0], t=dayT(d), label=t?s[3]:s[1], sub=t?s[4]:s[2], color=t?"var(--sky)":s[5];
+    return `<div class="srow ${t?'trow':''}"><span class="d">${d}</span>
+    <span class="a" style="color:${color}">${label}</span>${sub?`<span class="s">${sub}</span>`:""}
+    <button class="planebtn ${t?'on':''}" data-travel="${d}" aria-label="Mark ${d} as a travel day">✈</button></div>`;}).join("")}</div>
+
+  ${dayHTML("Tue","Deadlift",["deadlift","ohp"],ACC_B,"Travel swap: backpack RDLs, suitcase carries, band pull-aparts.")}
+  ${dayHTML("Thu","Squat",["squat","bench"],ACC_A,"Travel swap: backpack rows, band or towel face pulls, planks.")}
+
+  <div class="ref"><button data-act="ref">How to run it<span>${S.ref?'▲':'▼'}</span></button>
+    ${S.ref?`<div class="refbody">
+      <h4>Autoregulate off your Whoop</h4>
+      <p><span class="g">Green (67+)</span> run the plan, chase the top set. <span class="a">Yellow (34–66)</span> keep the main lift, drop the RPE cap by one, cut the last accessory. <span class="r">Red (&lt;34)</span> technique day: main lift ~60% for crisp triples, then leave.</p>
+      <h4>Consistency floor</h4>
+      <p>Bad week? One squat, one press, one pull. 30 minutes. Showing up counts and keeps the streak alive.</p>
+      <h4>The rules</h4>
+      <p>Stop at the RPE cap, never grind to failure. Log every set and beat the same lift from last week by a rep. Deloads (weeks 4 and 8) should feel easy. Week 12 you retest, then update your maxes up top and the next block recalculates. Weights round to 2.5kg; the RPE cap matters more than the exact number.</p>
+    </div>`:""}
+  </div>
+
+  <div class="btnrow">
+    <button class="reset" data-act="reset">Reset logs</button>
+    <button class="reset" data-act="copyall" data-lbl="Copy full log">Copy full log</button>
+  </div>
+  <div class="foot">The smarter you get, the stronger you get</div>`;
 }
 
-function renderWeekly() {
-  const hint = isSunday()
-    ? "Sunday reflection — 20 minutes, honest answers."
-    : "Weekly reflection — best done on Sundays, available anytime.";
-
-  let html = `<p class="section-hint" style="margin-top:8px;">${hint}</p>`;
-
-  WEEKLY_QS.forEach(q => {
-    html += `<div class="weekly-q">
-      <p class="weekly-label">${q.label}</p>
-      <textarea rows="4" placeholder="Write honestly..." 
-        oninput="updateWeekly('${q.id}', this.value)">${escHtml(state.weekly[q.id] || '')}</textarea>
-    </div>`;
-  });
-
-  html += `<button class="save-btn ${state.saved ? 'saved' : ''}" onclick="saveWeekly()">
-    ${state.saved ? "Saved ✓" : "Save reflection"}
-  </button>`;
-
-  return html;
-}
-
-function renderHistory() {
-  let html = `<p class="group-label" style="margin-top:4px;">Last 30 days</p>`;
-  const today = new Date();
-
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = "habits_" + d.toISOString().split("T")[0];
-    const data = loadData(key);
-    const count = Object.values(data).filter(Boolean).length;
-    const hasData = Object.keys(data).length > 0;
-    const p = Math.round((count / HABITS.length) * 100);
-    const label = i === 0 ? "Today" : i === 1 ? "Yesterday" : d.toLocaleDateString("en-SG", { day: "numeric", month: "short" });
-    const fillColor = p >= 75 ? "#6dbf6d" : p >= 50 ? "#c8a96e" : "#333";
-    const pctColor = p >= 75 ? "#6dbf6d" : p >= 50 ? "#c8a96e" : "#444";
-
-    html += `<div class="history-day">
-      <span class="history-date">${label}</span>
-      <div class="history-right">
-        <div class="history-track">
-          <div class="history-fill" style="width:${hasData ? p : 0}%; background:${fillColor};"></div>
-        </div>
-        <span class="history-pct" style="color:${pctColor};">${hasData ? p + "%" : "—"}</span>
-      </div>
-    </div>`;
+const app=document.getElementById("app");
+app.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.rm){
+    const v=t.value; S.oneRMs[t.dataset.rm]=v===""?"":Number(v); persist();
+    ["squat","bench","deadlift","ohp"].forEach(k=>{const el=document.getElementById("wt-"+k); if(el) el.textContent=weightCell(k);});
+  } else if(t.dataset.log){
+    const key=t.dataset.log, si=+t.dataset.set, f=t.dataset.f;
+    const e=S.logs[key]=S.logs[key]||{}; const arr=e.sets=e.sets||[]; arr[si]=arr[si]||{}; arr[si][f]=t.value; persist();
   }
-
-  return html;
-}
-
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ACTIONS
-window.setView = function(v) {
-  state.view = v;
-  render();
-};
-
-window.toggleHabit = function(id) {
-  state.habits[id] = !state.habits[id];
-  saveData("habits_" + getTodayKey(), state.habits);
-  render();
-};
-
-window.updateWin = function(i, val) {
-  state.wins[i] = val;
-};
-
-window.saveWins = function() {
-  saveData("wins_" + getTodayKey(), { list: state.wins });
-  flashSaved();
-};
-
-window.updateWeekly = function(id, val) {
-  state.weekly[id] = val;
-};
-
-window.saveWeekly = function() {
-  saveData("weekly_" + getWeekKey(), state.weekly);
-  flashSaved();
-};
-
-function flashSaved() {
-  state.saved = true;
-  render();
-  clearTimeout(state.savedTimer);
-  state.savedTimer = setTimeout(() => {
-    state.saved = false;
-    render();
-  }, 2000);
-}
-
+});
+app.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.week){S.week=Number(b.dataset.week);persist();render();}
+  else if(b.dataset.done){const k=b.dataset.done;S.logs[k]=S.logs[k]||{};S.logs[k].done=!S.logs[k].done;persist();render();}
+  else if(b.dataset.travel){const tk=S.week+":"+b.dataset.travel;S.travel[tk]=!S.travel[tk];persist();render();}
+  else if(b.dataset.copy){const p=DAYPLAN[b.dataset.copy];if(p)copyText(sessionText(b.dataset.copy,p.title,p.mains),b);}
+  else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
+  else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
+  else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};persist();render();}}
+});
 render();
 </script>
 </body>
