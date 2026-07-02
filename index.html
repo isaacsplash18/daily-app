@@ -77,6 +77,8 @@
   .fallback b{color:var(--ink);font-weight:600}
   .logrow{display:flex;align-items:center;gap:8px;margin-top:8px}
   .logrow input{width:56px}
+  .acclog{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .acclog input{width:72px}
   .setn{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);width:38px}
   input::placeholder{color:var(--ink4)}
   .x{font-family:var(--mono);color:var(--ink4);font-size:12px}
@@ -143,7 +145,7 @@ const ACC_B=[["Barbell row","3 × 6–10","~40kg"],["Bulgarian split squat (paus
 const PHASE={Build:"#a3a3a3",Strength:"var(--amber)",Peak:"var(--red)",Deload:"var(--green)",Retest:"var(--red)"};
 const DEFAULT={squat:100,bench:65,deadlift:110,ohp:40};
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false,acc:{}};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
@@ -172,7 +174,9 @@ function sessionText(day){
     if(note)out+="\n    "+note;
     out+="\n    logged: "+(parts.length?parts.join(", "):"—");});
   out+="\n\nACCESSORIES (RPE 8, never to failure)";
-  p.acc.forEach(function(a){out+="\n  "+a[0]+" — "+a[1]+(a[2]?" (start "+a[2]+")":"");});
+  var al=S.acc[S.week+":"+day]||{};
+  p.acc.forEach(function(a,idx){var wt=al[idx];
+    out+="\n  "+a[0]+" — "+a[1]+((wt!=null&&wt!=="")?" · "+wt+"kg":(a[2]?" (start "+a[2]+")":""));});
   if(trav)out+="\n  ✈ "+p.swap;
   return out;}
 function fullLogText(){var out="Strength System — training log",found=false;for(var wk=1;wk<=WEEKS.length;wk++){var wl="";[["Tue","Deadlift",["deadlift","ohp"]],["Thu","Squat",["squat","bench"]]].forEach(function(g){var ln="";g[2].forEach(function(k){var L=LIFTS[k],lg=S.logs[wk+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length)ln+="\n    "+L.name+": "+parts.join(", ");});if(ln)wl+="\n  "+g[0]+" · "+g[1]+ln;});if(wl){found=true;out+="\n\nWeek "+wk+wl;}}return found?out:"Nothing logged yet.";}
@@ -213,7 +217,7 @@ function dayHTML(day,title,mains,acc,swap){
     ${mains.map(k=>mainHTML(k,trav)).join("")}
     <div class="acc"><div class="lbl">Accessories</div>
       <div class="accnote">Starting loads to calibrate from. Run at RPE 8, never to failure. Add the smallest jump once you top the rep range.</div>
-      <ul>${acc.map(a=>`<li><div class="acctop"><span>${a[0]}</span><span class="p">${a[1]}</span></div>${a[2]?`<div class="accstart">start ${a[2]}</div>`:""}</li>`).join("")}</ul>
+      <ul>${(function(){var ak=S.week+":"+day,al=S.acc[ak]||{};return acc.map(function(a,idx){return '<li><div class="acctop"><span>'+a[0]+'</span><span class="p">'+a[1]+'</span></div>'+(a[2]?'<div class="accstart">start '+a[2]+'</div>':"")+'<div class="acclog"><span class="setn">used</span><input inputmode="text" placeholder="kg" data-acc="'+ak+'" data-ai="'+idx+'" value="'+(al[idx]!=null?esc(al[idx]):'')+'"></div></li>';}).join("");})()}</ul>
       ${trav?`<div class="accswap">✈ ${esc(swap)}</div>`:""}
     </div>
     <button class="copybtn" data-copy="${day}" data-lbl="Copy this session">Copy this session</button></div>`;
@@ -291,6 +295,8 @@ app.addEventListener("input",e=>{
   } else if(t.dataset.log){
     const key=t.dataset.log, si=+t.dataset.set, f=t.dataset.f;
     const e=S.logs[key]=S.logs[key]||{}; const arr=e.sets=e.sets||[]; arr[si]=arr[si]||{}; arr[si][f]=t.value; persist();
+  } else if(t.dataset.acc){
+    const o=S.acc[t.dataset.acc]=S.acc[t.dataset.acc]||{}; o[t.dataset.ai]=t.value; persist();
   }
 });
 app.addEventListener("click",e=>{
@@ -301,7 +307,7 @@ app.addEventListener("click",e=>{
   else if(b.dataset.copy){if(DAYPLAN[b.dataset.copy])copyText(sessionText(b.dataset.copy),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
-  else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};persist();render();}}
+  else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};S.acc={};persist();render();}}
 });
 render();
 </script>
