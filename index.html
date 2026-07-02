@@ -151,9 +151,30 @@ const r25=v=>Math.round(v/2.5)*2.5;
 const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
 function ramp(W){if(!W)return[];const out=["bar × 8"];let last=20;[[0.5,5],[0.7,3],[0.85,2]].forEach(function(s){const x=r25(W*s[0]);if(x>20&&x<W&&x!==last){out.push(fmt(x)+" × "+s[1]);last=x;}});return out;}
 function parseSR(sr){var mx=sr.match(/(\d+)\s*[×x]\s*(\d+)/);if(mx)return{sets:+mx[1],reps:+mx[2]};var top=sr.match(/[Tt]op\s*(\d+)/);if(top)return{sets:1,reps:+top[1]};return{sets:1,reps:0};}
-var DAYPLAN={Tue:{title:"Deadlift",mains:["deadlift","ohp"]},Thu:{title:"Squat",mains:["squat","bench"]}};
+var DAYPLAN={
+ Tue:{title:"Deadlift",mains:["deadlift","ohp"],acc:ACC_B,swap:"Travel swap: backpack RDLs, suitcase carries, band pull-aparts."},
+ Thu:{title:"Squat",mains:["squat","bench"],acc:ACC_A,swap:"Travel swap: backpack rows, band or towel face pulls, planks."}};
 function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
-function sessionText(day,title,mains){var out="Week "+S.week+" · "+day+" · "+title,any=false;mains.forEach(function(k){var L=LIFTS[k],lg=S.logs[S.week+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length){any=true;out+="\n"+L.name+": "+parts.join(", ");}});return any?out:out+"\nNo sets logged yet.";}
+function sessionText(day){
+  var p=DAYPLAN[day];if(!p)return "";
+  var w=WEEKS[S.week-1],i=S.week-1,trav=!!S.travel[S.week+":"+day];
+  var out="Week "+S.week+" · "+day+" · "+p.title+(trav?" · ✈ travel":"");
+  out+="\n"+w.phase+" · "+Math.round(w.pct*100)+"% week";
+  out+="\n\nWARM-UP\n  McGill Big 3 — curl-up, side plank, bird dog (activation)";
+  p.mains.forEach(function(k){var L=LIFTS[k],rmv=Number(S.oneRMs[L.rm]),W=rmv?r25(rmv*w.pct):0;
+    if(trav)out+="\n  "+L.name+": barbell if available — else "+L.fallback;
+    else if(W)out+="\n  "+L.name+" ramp: "+ramp(W).join(" → ")+" → work";});
+  out+="\n\nMAIN LIFTS";
+  p.mains.forEach(function(k){var L=LIFTS[k],rmv=Number(S.oneRMs[L.rm]),W=rmv?r25(rmv*w.pct):0;
+    var note=L.note[i],lg=S.logs[S.week+":"+k]||{},sets=lg.sets||[],parts=[];
+    sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
+    out+="\n  "+L.name+" — "+L.sr[i]+" · "+Math.round(w.pct*100)+"% · RPE "+L.rpe[i]+(W?" · "+fmt(W)+"kg":"");
+    if(note)out+="\n    "+note;
+    out+="\n    logged: "+(parts.length?parts.join(", "):"—");});
+  out+="\n\nACCESSORIES (RPE 8, never to failure)";
+  p.acc.forEach(function(a){out+="\n  "+a[0]+" — "+a[1]+(a[2]?" (start "+a[2]+")":"");});
+  if(trav)out+="\n  ✈ "+p.swap;
+  return out;}
 function fullLogText(){var out="Strength System — training log",found=false;for(var wk=1;wk<=WEEKS.length;wk++){var wl="";[["Tue","Deadlift",["deadlift","ohp"]],["Thu","Squat",["squat","bench"]]].forEach(function(g){var ln="";g[2].forEach(function(k){var L=LIFTS[k],lg=S.logs[wk+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length)ln+="\n    "+L.name+": "+parts.join(", ");});if(ln)wl+="\n  "+g[0]+" · "+g[1]+ln;});if(wl){found=true;out+="\n\nWeek "+wk+wl;}}return found?out:"Nothing logged yet.";}
 function flash(btn){if(!btn)return;var t=btn.getAttribute("data-lbl")||btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=t;},1200);}
 function copyText(txt,btn){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){flash(btn);},function(){window.prompt("Copy your log:",txt);});}else{window.prompt("Copy your log:",txt);}}catch(e){window.prompt("Copy your log:",txt);}}
@@ -277,7 +298,7 @@ app.addEventListener("click",e=>{
   if(b.dataset.week){S.week=Number(b.dataset.week);persist();render();}
   else if(b.dataset.done){const k=b.dataset.done;S.logs[k]=S.logs[k]||{};S.logs[k].done=!S.logs[k].done;persist();render();}
   else if(b.dataset.travel){const tk=S.week+":"+b.dataset.travel;S.travel[tk]=!S.travel[tk];persist();render();}
-  else if(b.dataset.copy){const p=DAYPLAN[b.dataset.copy];if(p)copyText(sessionText(b.dataset.copy,p.title,p.mains),b);}
+  else if(b.dataset.copy){if(DAYPLAN[b.dataset.copy])copyText(sessionText(b.dataset.copy),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
   else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};persist();render();}}
