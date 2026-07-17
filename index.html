@@ -77,13 +77,17 @@
   .fallback b{color:var(--ink);font-weight:600}
   .logrow{display:flex;align-items:center;gap:8px;margin-top:8px}
   .logrow input{width:56px}
-  .acclog{display:flex;align-items:center;gap:8px;margin-top:6px}
-  .acclog input{width:72px}
+  .power{border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.06);border-radius:9px;padding:12px;margin-bottom:14px}
+  .powerh{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+  .powerm{font-size:14px;font-weight:600;color:var(--ink);margin-top:4px}
+  .powers{font-size:12px;color:var(--ink2);margin-top:4px}
+  .powers2{font-size:12px;color:var(--ink3);margin-top:4px}
   .setn{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);width:38px}
   input::placeholder{color:var(--ink4)}
   .x{font-family:var(--mono);color:var(--ink4);font-size:12px}
   .acc{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
   .acc li{font-size:12px;color:var(--ink2);list-style:none;padding:3px 0}
+  .acc li+li{border-top:1px solid var(--line);margin-top:10px;padding-top:12px}
   .acctop{display:flex;justify-content:space-between}
   .accstart{font-family:var(--mono);font-size:10px;color:var(--ink4);margin-top:1px}
   .accnote{font-size:10px;color:var(--ink4);margin:4px 0 4px}
@@ -140,19 +144,21 @@ const LIFTS={
    sr:["3 × 8","3 × 8","3 × 6","3 × 6","4 × 5","4 × 5","4 × 4","3 × 5","4 × 4","4 × 3","Top 3","3×4 / test"],
    rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
    note:["Technique focus.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 6 back-off @ 72.5%","New top triple if good, then update your max. Else 3×4."]}};
-const ACC_A=[["Chin-up or lat pulldown","3 × 6–10","BW / ~45kg pulldown"],["Face pulls","2–3 × 12–15","~15–20kg or band"],["Rear-delt raise","2 × 12–15","4–6kg"],["Pallof press","3 × 10 / side","~10–15kg or band"]];
-const ACC_B=[["Barbell row","3 × 6–10","~40kg"],["Bulgarian split squat (paused)","2–3 × 8–10 / leg","BW–2×10kg"],["Cuff external rotation","2 × 12–15","2–4kg or band"],["Pull-up","3 × 5–10","BW · band-assist or +load to fit reps"],["Single-arm suitcase carry","2–3 × 30 m / side","16–24kg"]];
+const ACC_A=[["Chin-up or lat pulldown","3 sets × 6–10 reps","BW / ~45kg pulldown"],["Face pulls","3 sets × 12–15 reps","~15–20kg or band"],["Rear-delt raise","2 sets × 12–15 reps","4–6kg"],["Pallof press","3 sets × 10 reps each side","~10–15kg or band"],["Ab wheel rollout (or hanging leg raise)","3 sets × 8–12 reps","BW · from knees, go full only when the back stays flat"]];
+const ACC_B=[["Barbell row","3 sets × 6–10 reps","~40kg"],["Bulgarian split squat (paused)","3 sets × 8–10 reps each leg","BW–2×10kg"],["Cuff external rotation","2 sets × 12–15 reps","2–4kg or band"],["Pull-up","3 sets × 5–10 reps","BW · band-assist or +load to fit reps"],["Single-arm suitcase carry","3 sets × 30 m each side","16–24kg"],["Hanging knee raise","3 sets × 10–15 reps","BW · add a dumbbell between the feet when 15 is easy"]];
 const PHASE={Build:"#a3a3a3",Strength:"var(--amber)",Peak:"var(--red)",Deload:"var(--green)",Retest:"var(--red)"};
 const DEFAULT={squat:100,bench:65,deadlift:110,ohp:40};
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false,acc:{}};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
+// Migrate old single-weight accessory logs (S.acc["week:day"][idx]) into per-set logs, then drop S.acc.
+if(S.acc){try{Object.keys(S.acc).forEach(function(ak){var parts=ak.split(":"),wk=parts[0],day=parts[1],o=S.acc[ak]||{};Object.keys(o).forEach(function(ai){var val=o[ai];if(val==null||val==="")return;var nk=wk+":acc:"+day+":"+ai;if(!S.logs[nk])S.logs[nk]={sets:[{w:String(val)}]};});});}catch(e){}delete S.acc;persist();}
 
 const r25=v=>Math.round(v/2.5)*2.5;
 const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
 function ramp(W){if(!W)return[];const out=["bar × 8"];let last=20;[[0.5,5],[0.7,3],[0.85,2]].forEach(function(s){const x=r25(W*s[0]);if(x>20&&x<W&&x!==last){out.push(fmt(x)+" × "+s[1]);last=x;}});return out;}
-function parseSR(sr){var mx=sr.match(/(\d+)\s*[×x]\s*(\d+)/);if(mx)return{sets:+mx[1],reps:+mx[2]};var top=sr.match(/[Tt]op\s*(\d+)/);if(top)return{sets:1,reps:+top[1]};return{sets:1,reps:0};}
+function parseSR(sr){var ns=sr.match(/^\s*(\d+)\s*sets?/i);if(ns){var rp=sr.match(/[×x]\s*(\d+)/);return{sets:+ns[1],reps:rp?+rp[1]:0};}var mx=sr.match(/(\d+)\s*[×x]\s*(\d+)/);if(mx)return{sets:+mx[1],reps:+mx[2]};var top=sr.match(/[Tt]op\s*(\d+)/);if(top)return{sets:1,reps:+top[1]};return{sets:1,reps:0};}
 var DAYPLAN={
  Tue:{title:"Deadlift",mains:["deadlift","ohp"],acc:ACC_B,swap:"Travel swap: backpack RDLs, suitcase carries, band pull-aparts."},
  Thu:{title:"Squat",mains:["squat","bench"],acc:ACC_A,swap:"Travel swap: backpack rows, band or towel face pulls, planks."}};
@@ -166,6 +172,7 @@ function sessionText(day){
   p.mains.forEach(function(k){var L=LIFTS[k],rmv=Number(S.oneRMs[L.rm]),W=rmv?r25(rmv*w.pct):0;
     if(trav)out+="\n  "+L.name+": barbell if available — else "+L.fallback;
     else if(W)out+="\n  "+L.name+" ramp: "+ramp(W).join(" → ")+" → work";});
+  if(day==="Thu"&&!trav)out+="\n\nPOWER — do first\n  Rotational throw · 4 × 3 / side (explosive, full rest, before you lift)";
   out+="\n\nMAIN LIFTS";
   p.mains.forEach(function(k){var L=LIFTS[k],rmv=Number(S.oneRMs[L.rm]),W=rmv?r25(rmv*w.pct):0;
     var note=L.note[i],lg=S.logs[S.week+":"+k]||{},sets=lg.sets||[],parts=[];
@@ -174,12 +181,12 @@ function sessionText(day){
     if(note)out+="\n    "+note;
     out+="\n    logged: "+(parts.length?parts.join(", "):"—");});
   out+="\n\nACCESSORIES (RPE 8, never to failure)";
-  var al=S.acc[S.week+":"+day]||{};
-  p.acc.forEach(function(a,idx){var wt=al[idx];
-    out+="\n  "+a[0]+" — "+a[1]+((wt!=null&&wt!=="")?" · "+wt+"kg":(a[2]?" (start "+a[2]+")":""));});
+  p.acc.forEach(function(a,idx){var lg=S.logs[S.week+":acc:"+day+":"+idx]||{},sets=lg.sets||[],parts=[];
+    sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
+    out+="\n  "+a[0]+" — "+a[1]+(parts.length?" · "+parts.join(", "):(a[2]?" (start "+a[2]+")":""));});
   if(trav)out+="\n  ✈ "+p.swap;
   return out;}
-function fullLogText(){var out="Strength System — training log",found=false;for(var wk=1;wk<=WEEKS.length;wk++){var wl="";[["Tue","Deadlift",["deadlift","ohp"]],["Thu","Squat",["squat","bench"]]].forEach(function(g){var ln="";g[2].forEach(function(k){var L=LIFTS[k],lg=S.logs[wk+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length)ln+="\n    "+L.name+": "+parts.join(", ");});if(ln)wl+="\n  "+g[0]+" · "+g[1]+ln;});if(wl){found=true;out+="\n\nWeek "+wk+wl;}}return found?out:"Nothing logged yet.";}
+function fullLogText(){var out="Strength System — training log",found=false;for(var wk=1;wk<=WEEKS.length;wk++){var wl="";[["Tue","Deadlift",["deadlift","ohp"]],["Thu","Squat",["squat","bench"]]].forEach(function(g){var ln="";g[2].forEach(function(k){var L=LIFTS[k],lg=S.logs[wk+":"+k]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length)ln+="\n    "+L.name+": "+parts.join(", ");});var acc=(DAYPLAN[g[0]]||{}).acc||[];acc.forEach(function(a,idx){var lg=S.logs[wk+":acc:"+g[0]+":"+idx]||{},sets=lg.sets||[],parts=[];sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});if(parts.length)ln+="\n    "+a[0]+": "+parts.join(", ");});if(ln)wl+="\n  "+g[0]+" · "+g[1]+ln;});if(wl){found=true;out+="\n\nWeek "+wk+wl;}}return found?out:"Nothing logged yet.";}
 function flash(btn){if(!btn)return;var t=btn.getAttribute("data-lbl")||btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=t;},1200);}
 function copyText(txt,btn){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){flash(btn);},function(){window.prompt("Copy your log:",txt);});}else{window.prompt("Copy your log:",txt);}}catch(e){window.prompt("Copy your log:",txt);}}
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -207,17 +214,31 @@ function mainHTML(k,trav){
     ${(function(){var pr=parseSR(L.sr[i]);var wl=log.sets||[];var rows="";for(var si=0;si<pr.sets;si++){var st=wl[si]||{};rows+='<div class="logrow"><span class="setn">Set '+(si+1)+'</span><input inputmode="decimal" placeholder="'+(W?fmt(W):'kg')+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+(pr.reps||'reps')+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}return rows;})()}
   </div>`;
 }
+function accHTML(day,a,idx){
+  var pr=parseSR(a[1]);
+  var key=S.week+":acc:"+day+":"+idx;
+  var wl=(S.logs[key]||{}).sets||[];
+  var rows="";
+  for(var si=0;si<pr.sets;si++){var st=wl[si]||{};
+    rows+='<div class="logrow"><span class="setn">Set '+(si+1)+'</span><input inputmode="decimal" placeholder="kg" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+(pr.reps||'reps')+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
+  return '<li><div class="acctop"><span>'+esc(a[0])+'</span><span class="p">'+esc(a[1])+'</span></div>'+(a[2]?'<div class="accstart">start '+esc(a[2])+'</div>':"")+rows+'</li>';
+}
 function dayHTML(day,title,mains,acc,swap){
   const trav=!!S.travel[S.week+":"+day];
+  const power=(day==="Thu"&&!trav)?`<div class="power"><div class="powerh">Power — do first</div>
+      <div class="powerm">Rotational throw · 4 × 3 / side</div>
+      <div class="powers">Explosive, full rest. Do this before you lift, while you're fresh.</div>
+      <div class="powers2">Med ball 3–5 kg into a wall. No space or ball? Anchor a band at chest height and throw against it without releasing.</div></div>`:"";
   return `<div class="day"><div class="dhead">${day} · ${title}${trav?' <span class="tflag">✈ travel</span>':''}</div>
     <div class="warm"><div class="warmh">Warm-up first</div>
       <div class="warmi"><b>1.</b> McGill Big 3 — curl-up, side plank, bird dog (activation)</div>
       <div class="warmi"><b>2.</b> Ramp each lift to its working weight (shown per lift below)</div>
       <div class="warms">Then your working sets, then accessories.</div></div>
+    ${power}
     ${mains.map(k=>mainHTML(k,trav)).join("")}
     <div class="acc"><div class="lbl">Accessories</div>
       <div class="accnote">Starting loads to calibrate from. Run at RPE 8, never to failure. Add the smallest jump once you top the rep range.</div>
-      <ul>${(function(){var ak=S.week+":"+day,al=S.acc[ak]||{};return acc.map(function(a,idx){return '<li><div class="acctop"><span>'+a[0]+'</span><span class="p">'+a[1]+'</span></div>'+(a[2]?'<div class="accstart">start '+a[2]+'</div>':"")+'<div class="acclog"><span class="setn">used</span><input inputmode="text" placeholder="kg" data-acc="'+ak+'" data-ai="'+idx+'" value="'+(al[idx]!=null?esc(al[idx]):'')+'"></div></li>';}).join("");})()}</ul>
+      <ul>${acc.map((a,idx)=>accHTML(day,a,idx)).join("")}</ul>
       ${trav?`<div class="accswap">✈ ${esc(swap)}</div>`:""}
     </div>
     <button class="copybtn" data-copy="${day}" data-lbl="Copy this session">Copy this session</button></div>`;
@@ -295,8 +316,6 @@ app.addEventListener("input",e=>{
   } else if(t.dataset.log){
     const key=t.dataset.log, si=+t.dataset.set, f=t.dataset.f;
     const e=S.logs[key]=S.logs[key]||{}; const arr=e.sets=e.sets||[]; arr[si]=arr[si]||{}; arr[si][f]=t.value; persist();
-  } else if(t.dataset.acc){
-    const o=S.acc[t.dataset.acc]=S.acc[t.dataset.acc]||{}; o[t.dataset.ai]=t.value; persist();
   }
 });
 app.addEventListener("click",e=>{
@@ -307,7 +326,7 @@ app.addEventListener("click",e=>{
   else if(b.dataset.copy){if(DAYPLAN[b.dataset.copy])copyText(sessionText(b.dataset.copy),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
-  else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};S.acc={};persist();render();}}
+  else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};persist();render();}}
 });
 render();
 </script>
