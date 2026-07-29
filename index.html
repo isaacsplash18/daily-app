@@ -57,6 +57,12 @@
   .srow .s{font-size:12px;color:var(--ink4)}
   .srow.trow{background:rgba(56,189,248,.06);border-radius:8px}
   .srow.trow .a{color:var(--sky)}
+  .chk{flex:none;width:24px;height:24px;border:1px solid #3a3a3a;background:transparent;color:var(--green);
+    border-radius:6px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .chk.on{border-color:var(--green);background:rgba(52,211,153,.14)}
+  .srow.done .a{text-decoration:line-through}
+  .srow.done .a,.srow.done .s{opacity:.5}
+  .donecount{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--green);margin-left:8px}
   .planebtn{margin-left:auto;flex:none;width:28px;height:28px;border:1px solid #2a2a2a;background:transparent;
     color:var(--ink4);border-radius:7px;font-size:13px;cursor:pointer;line-height:1}
   .planebtn.on{border-color:var(--sky);background:rgba(56,189,248,.12);color:#7dd3fc}
@@ -149,7 +155,7 @@ const ACC_B=[["Barbell row","3 sets × 6–10 reps","~40kg"],["Bulgarian split s
 const PHASE={Build:"#a3a3a3",Strength:"var(--amber)",Peak:"var(--red)",Deload:"var(--green)",Retest:"var(--red)"};
 const DEFAULT={squat:100,bench:65,deadlift:110,ohp:40};
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},travel:{},ref:false,sessions:{}};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 // Migrate old single-weight accessory logs (S.acc["week:day"][idx]) into per-set logs, then drop S.acc.
@@ -248,6 +254,7 @@ function render(){
   const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   const dayT=d=>!!S.travel[S.week+":"+d];
   const anyT=DAYS.some(dayT);
+  const doneCount=DAYS.filter(d=>!!S.sessions[S.week+":"+d]).length;
   const weekT=n=>Object.keys(S.travel).some(k=>k.indexOf(n+":")===0&&S.travel[k]);
   const sched=[
     ["Mon","Boxing — technical","lighter, day after the run","Shadowboxing","6–8 × 3-min rounds","var(--ink2)"],
@@ -275,14 +282,16 @@ function render(){
       ${t?'<span class="plane">✈</span>':''}</button>`;}).join("")}</div>
 
   <div class="wkhead">
-    <div><b>Week ${S.week}</b><span class="badge" style="color:${PHASE[w.phase]};border-color:${PHASE[w.phase]}">${w.phase}</span></div>
-    <span class="hint">tap ✈ on a day to mark travel</span>
+    <div><b>Week ${S.week}</b><span class="badge" style="color:${PHASE[w.phase]};border-color:${PHASE[w.phase]}">${w.phase}</span>${doneCount?`<span class="donecount">${doneCount} done</span>`:''}</div>
+    <span class="hint">tap ✓ done · ✈ travel</span>
   </div>
   ${anyT?`<div class="tbanner">Maintain, don't chase PBs. Keep the run, keep the pattern, keep the streak. The days you flagged are swapped for things you can do in any hotel.</div>`:""}
 
   <div class="sched">${sched.map(s=>{
-    const d=s[0], t=dayT(d), label=t?s[3]:s[1], sub=t?s[4]:s[2], color=t?"var(--sky)":s[5];
-    return `<div class="srow ${t?'trow':''}"><span class="d">${d}</span>
+    const d=s[0], t=dayT(d), done=!!S.sessions[S.week+":"+d], label=t?s[3]:s[1], sub=t?s[4]:s[2], color=t?"var(--sky)":s[5];
+    return `<div class="srow ${t?'trow':''} ${done?'done':''}">
+    <button class="chk ${done?'on':''}" data-sess="${d}" aria-label="Mark ${d} session done this week">${done?'✓':''}</button>
+    <span class="d">${d}</span>
     <span class="a" style="color:${color}">${label}</span>${sub?`<span class="s">${sub}</span>`:""}
     <button class="planebtn ${t?'on':''}" data-travel="${d}" aria-label="Mark ${d} as a travel day">✈</button></div>`;}).join("")}</div>
 
@@ -321,7 +330,7 @@ app.addEventListener("input",e=>{
 app.addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
   if(b.dataset.week){S.week=Number(b.dataset.week);persist();render();}
-  else if(b.dataset.done){const k=b.dataset.done;S.logs[k]=S.logs[k]||{};S.logs[k].done=!S.logs[k].done;persist();render();}
+  else if(b.dataset.sess){const k=S.week+":"+b.dataset.sess;S.sessions[k]=!S.sessions[k];persist();render();}
   else if(b.dataset.travel){const tk=S.week+":"+b.dataset.travel;S.travel[tk]=!S.travel[tk];persist();render();}
   else if(b.dataset.copy){if(DAYPLAN[b.dataset.copy])copyText(sessionText(b.dataset.copy),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
