@@ -197,6 +197,62 @@ function flash(btn){if(!btn)return;var t=btn.getAttribute("data-lbl")||btn.textC
 function copyText(txt,btn){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){flash(btn);},function(){window.prompt("Copy your log:",txt);});}else{window.prompt("Copy your log:",txt);}}catch(e){window.prompt("Copy your log:",txt);}}
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
+// ---- CSV export / import (spreadsheet backup, lossless round-trip) ----
+const RM_NAMES=[["squat","Back squat"],["bench","Bench press"],["deadlift","Deadlift"],["ohp","Overhead press"]];
+function csvCell(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function buildCSV(){
+  var rows=[["Category","Week","Day","Exercise","Set","Weight","Reps","Done","Key"]];
+  RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","",m[0]]);});
+  for(var wk=1;wk<=WEEKS.length;wk++){
+    ["Tue","Thu"].forEach(function(day){
+      var p=DAYPLAN[day];
+      p.mains.forEach(function(k){var L=LIFTS[k],key=wk+":"+k,sets=(S.logs[key]||{}).sets||[];
+        sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Main",wk,day,L.name,si+1,st.w||"",st.r||"","",key]);});});
+      p.acc.forEach(function(a,idx){var key=wk+":acc:"+day+":"+idx,sets=(S.logs[key]||{}).sets||[];
+        sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Accessory",wk,day,a[0],si+1,st.w||"",st.r||"","",key]);});});
+    });
+  }
+  Object.keys(S.sessions||{}).forEach(function(key){if(S.sessions[key]){var pr=key.split(":");rows.push(["Session",pr[0],pr[1],"","","","","yes",key]);}});
+  Object.keys(S.travel||{}).forEach(function(key){if(S.travel[key]){var pr=key.split(":");rows.push(["Travel",pr[0],pr[1],"","","","","yes",key]);}});
+  return rows.map(function(r){return r.map(csvCell).join(",");}).join("\n");
+}
+function downloadCSV(btn){
+  try{
+    var blob=new Blob([buildCSV()],{type:"text/csv;charset=utf-8"});
+    var url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download="strength-log.csv";document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},0);
+    flash(btn);
+  }catch(e){alert("Could not download. Try Copy full log instead.");}
+}
+function parseCSV(text){
+  var rows=[],row=[],cur="",i=0,inQ=false,c;text=String(text).replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  while(i<text.length){c=text[i];
+    if(inQ){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=c;}
+    else{if(c==='"')inQ=true;else if(c===",")row.push(cur),cur="";else if(c==="\n"){row.push(cur);rows.push(row);row=[];cur="";}else cur+=c;}
+    i++;}
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+function importCSV(text){
+  var rows=parseCSV(text);if(!rows.length)return false;
+  var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
+  ["category","week","day","exercise","set","weight","reps","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
+  if(ci.category<0||ci.key<0)return false;
+  var newLogs={},newSessions={},newTravel={},newRMs=Object.assign({},S.oneRMs);
+  for(var i=1;i<rows.length;i++){
+    var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
+    var cat=(r[ci.category]||"").trim(),key=(r[ci.key]||"").trim();
+    var wt=ci.weight>=0?(r[ci.weight]||"").trim():"",rp=ci.reps>=0?(r[ci.reps]||"").trim():"";
+    if(cat==="Max"){if(key)newRMs[key]=wt===""?"":Number(wt);}
+    else if(cat==="Main"||cat==="Accessory"){if(!key)continue;var si=parseInt(r[ci.set],10);if(isNaN(si)||si<1)continue;
+      var e=newLogs[key]=newLogs[key]||{sets:[]};e.sets[si-1]=e.sets[si-1]||{};if(wt!=="")e.sets[si-1].w=wt;if(rp!=="")e.sets[si-1].r=rp;}
+    else if(cat==="Session"){if(key)newSessions[key]=true;}
+    else if(cat==="Travel"){if(key)newTravel[key]=true;}
+  }
+  S.oneRMs=newRMs;S.logs=newLogs;S.sessions=newSessions;S.travel=newTravel;persist();render();return true;
+}
+
 function weightCell(k){
   const w=WEEKS[S.week-1], rm=Number(S.oneRMs[k]);
   if(!rm) return "—";
@@ -313,6 +369,11 @@ function render(){
     <button class="reset" data-act="reset">Reset logs</button>
     <button class="reset" data-act="copyall" data-lbl="Copy full log">Copy full log</button>
   </div>
+  <div class="btnrow">
+    <button class="reset" data-act="export" data-lbl="Download CSV">Download CSV</button>
+    <button class="reset" data-act="import">Import CSV</button>
+  </div>
+  <input type="file" id="csvfile" accept=".csv,text/csv" style="display:none">
   <div class="foot">The smarter you get, the stronger you get</div>`;
 }
 
@@ -327,6 +388,17 @@ app.addEventListener("input",e=>{
     const e=S.logs[key]=S.logs[key]||{}; const arr=e.sets=e.sets||[]; arr[si]=arr[si]||{}; arr[si][f]=t.value; persist();
   }
 });
+app.addEventListener("change",e=>{
+  if(e.target.id!=="csvfile") return;
+  const f=e.target.files&&e.target.files[0]; e.target.value="";
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=function(){
+    if(!confirm("Import this file? It replaces the training data on THIS device (maxes, logged sets, checkmarks). Export first if unsure.")) return;
+    if(!importCSV(String(rd.result))) alert("Couldn't read that file. Make sure it's a CSV exported from this app.");
+  };
+  rd.readAsText(f);
+});
 app.addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
   if(b.dataset.week){S.week=Number(b.dataset.week);persist();render();}
@@ -335,6 +407,8 @@ app.addEventListener("click",e=>{
   else if(b.dataset.copy){if(DAYPLAN[b.dataset.copy])copyText(sessionText(b.dataset.copy),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
+  else if(b.dataset.act==="export"){downloadCSV(b);}
+  else if(b.dataset.act==="import"){const fi=document.getElementById("csvfile");if(fi)fi.click();}
   else if(b.dataset.act==="reset"){if(confirm("Clear all logged sets? Your maxes stay.")){S.logs={};persist();render();}}
 });
 render();
