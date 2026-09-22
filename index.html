@@ -177,13 +177,13 @@ const ACC=[
  ["Pallof press","2 sets × 10 reps each side","~10–15kg or band"]];
 
 const SCHED=[
- ["Mon","Easy run","recovery pace","easy0","var(--ink2)"],
- ["Tue","Quality run","the hard one","quality","var(--sky)"],
- ["Wed","Boxing","technical, keep it light",null,"var(--ink2)"],
- ["Thu","Strength","one full-body session","lift","var(--amber)"],
- ["Fri","Easy run","optional shakeout","easy1","var(--ink2)"],
- ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"],
- ["Sun","Long run","with the group","long","var(--green)"]];
+ ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
+ ["Tue","Quality run","the hard one","quality","var(--sky)","Quality run","runs go anywhere"],
+ ["Wed","Boxing","full session",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
+ ["Thu","Strength","one full-body session","lift","var(--amber)","Strength","bodyweight version in the card"],
+ ["Fri","HIIT / crossfit","your hard one",null,"var(--ink2)","Bodyweight circuit","5 rounds, hard"],
+ ["Sat","Rest","legs up before Sunday",null,"var(--ink4)","Rest","easy shakeout if you fancy"],
+ ["Sun","Long run","with the group","long","var(--green)","Long run","runs go anywhere"]];
 
 const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -215,6 +215,8 @@ function parseReps(p){var m=String(p).match(/[×x]\s*(\d+)/);return m?+m[1]:0;}
 const K=()=>BLOCK+S.week;
 function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
 function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(w.pct+m.adj)):0;}
+// Weeks where Friday HIIT would eat into Sunday's long run.
+function hardWeek(w){return w.long>=17||w.phase==="Taper"||w.phase==="Race";}
 
 // ---------- session + full log text ----------
 function runLine(slot,label,target){
@@ -229,8 +231,8 @@ function sessionText(){
   out+="\n\nRUNS";
   out+=runLine("long",(S.week===10?"Sun · RACE":"Sun · Long run"),w.long+" km");
   out+=runLine("quality","Tue · "+w.q.n+" ("+w.q.s+")","quality");
-  out+=runLine("easy0","Mon · Easy",w.easy[0]+" km");
-  out+=runLine("easy1","Fri · Easy",w.easy[1]+" km");
+  out+=runLine("easy","Easy run (any day)",w.easy[0]+" km");
+  out+="\n\nCROSS-TRAINING\n  Mon · Boxing — technical\n  Wed · Boxing\n  Fri · HIIT / crossfit"+(hardWeek(w)?" — keep it upper-body, Sunday is the priority":"");
   out+="\n\nSTRENGTH (Thu)";
   MAINS.forEach(function(m){
     var W=liftW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -249,7 +251,7 @@ function fullLogText(){
   var out="Half Marathon Block — training log",found=false;
   for(var wk=1;wk<=WEEKS.length;wk++){
     var W=WEEKS[wk-1],ln="";
-    [["long","Long run"],["quality","Quality"],["easy0","Easy (Mon)"],["easy1","Easy (Fri)"]].forEach(function(s){
+    [["long","Long run"],["quality","Quality"],["easy","Easy run"]].forEach(function(s){
       var lg=S.runs[wk+":"+s[0]]||{},bits=[];
       if(lg.km)bits.push(lg.km+" km");if(lg.t)bits.push(lg.t);
       if(bits.length)ln+="\n    "+s[1]+": "+bits.join(" / ");});
@@ -275,7 +277,7 @@ function buildCSV(){
   var rows=[["Category","Week","Day","Item","Set","Weight","Reps","Distance","Time","Done","Key"]];
   RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
   for(var wk=1;wk<=WEEKS.length;wk++){
-    [["long","Long run","Sun"],["quality","Quality","Tue"],["easy0","Easy","Mon"],["easy1","Easy","Fri"]].forEach(function(s){
+    [["long","Long run","Sun"],["quality","Quality","Tue"],["easy","Easy run",""]].forEach(function(s){
       var key=wk+":"+s[0],lg=S.runs[key]||{};
       if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push(["Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
     MAINS.forEach(function(m){
@@ -378,7 +380,7 @@ function liftHTML(){
     '<ul>'+ACC.map(accHTML).join("")+'</ul></div></div>';
 }
 function render(){
-  var w=WEEKS[S.week-1],td=todayDay(),isNow=(S.week===currentWeek());
+  var w=WEEKS[S.week-1],td=todayDay(),isNow=(S.week===currentWeek()),easeFri=hardWeek(w);
   var doneCount=SCHED.filter(function(s){return !!S.sessions[K()+":"+s[0]];}).length;
   var anyT=SCHED.some(function(s){return !!S.travel[K()+":"+s[0]];});
   var weekT=function(n){return Object.keys(S.travel).some(function(k){return k.indexOf(BLOCK+n+":")===0&&S.travel[k];});};
@@ -411,7 +413,8 @@ function render(){
 
   '<div class="sched">'+SCHED.map(function(s){
     var d=s[0],t=!!S.travel[K()+":"+d],done=!!S.sessions[K()+":"+d];
-    var label=s[1],sub=s[2];
+    var label=t?s[5]:s[1],sub=t?s[6]:s[2];
+    if(d==="Fri"&&!t&&easeFri)sub="keep it upper-body — Sunday is the priority";
     if(S.week===10&&d==="Sun"){label="RACE — 21.1 km";sub="you have done the work";}
     return '<div class="srow '+(t?'trow':'')+' '+(done?'done':'')+' '+((isNow&&d===td)?'today':'')+'">'+
       '<button class="chk '+(done?'on':'')+'" data-sess="'+d+'" aria-label="Mark '+d+' done">'+(done?'✓':'')+'</button>'+
@@ -421,8 +424,7 @@ function render(){
 
   runHTML("long","Sun",(S.week===10?"RACE — BYD Half":"Long run"),w.long,"km","easy, conversational",w.lnote,(S.week===10?"race":"key"))+
   runHTML("quality","Tue",w.q.n,w.q.s,"session","the one hard run",w.q.d,"key")+
-  runHTML("easy0","Mon","Easy run",w.easy[0],"km","recovery pace","Slow. This run exists to help you recover, not to get fitter.","")+
-  runHTML("easy1","Fri","Easy run",w.easy[1],"km","optional","Skip it without guilt if the legs are flat before Sunday.","")+
+  runHTML("easy","Any day","Easy run · 3rd run",w.easy[0],"km","optional but valuable","Tag it onto a boxing day or use Saturday as a shakeout. Conversational pace — this is the aerobic base your long run sits on.","")+
 
   liftHTML()+
   '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
@@ -433,6 +435,8 @@ function render(){
     '<p>Roughly <span class="g">80%</span> of your running should be conversational — able to speak full sentences. Most people ruin a block by running their easy days too hard and their hard days too soft. The Tuesday session and the Sunday long run are the only two that matter; everything else is just getting blood to the legs.</p>'+
     '<h4>Strength is maintenance now</h4>'+
     '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. Keep the load heavy-ish, keep the volume low, never go to failure. Deadlift drops out as a main lift because it costs more recovery than it returns while you are running; the RDL covers the hinge. The <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
+    '<h4>Boxing and HIIT alongside the running</h4>'+
+    '<p>Boxing is great aerobic work with low running impact — Monday stays technical and light because you ran long the day before. The one to watch is <span class="a">Friday HIIT</span>: it lands two days before your long run, and in the heavy weeks that is enough to blunt the session that matters most. From week 6 onward the app flags Friday automatically — on those days keep it upper-body and skip the heavy leg volume (squat jumps, box jumps, wall balls, heavy lunges). Three hard days a week is the ceiling: Tuesday, Friday and Sunday. Everything else stays genuinely easy.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
     '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
@@ -476,8 +480,8 @@ app.addEventListener("change",function(e){
 app.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.week){S.week=Number(b.dataset.week);persist();render();}
-  else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;S.sessions[k]=!S.sessions[k];persist();render();}
-  else if(b.dataset.travel){var tk=K()+":"+b.dataset.travel;S.travel[tk]=!S.travel[tk];persist();render();}
+  else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;if(S.sessions[k])delete S.sessions[k];else S.sessions[k]=true;persist();render();}
+  else if(b.dataset.travel){var tk=K()+":"+b.dataset.travel;if(S.travel[tk])delete S.travel[tk];else S.travel[tk]=true;persist();render();}
   else if(b.dataset.act==="copyweek"){copyText(sessionText(),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
