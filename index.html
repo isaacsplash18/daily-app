@@ -224,6 +224,53 @@ function liftSpec(m){var w=WEEKS[S.week-1],n=w.sets;
   if(m.top){var bo=Math.max(n-1,0);return "Top 1 × "+m.top+" @ "+pctStr(w.pct+m.topAdj)+(bo?" · then "+bo+" × "+m.reps+" @ "+pctStr(w.pct):"");}
   return n+" × "+m.reps+" @ "+pctStr(m.fixed);}
 
+// ---- Previous block (12-week Strength System): read-only view of the old logs ----
+const OLD_LIFTS={squat:"Back squat",bench:"Bench press",deadlift:"Deadlift",ohp:"Overhead press"};
+const OLD_DAY={squat:"Thu",bench:"Thu",deadlift:"Tue",ohp:"Tue"};
+const OLD_ACC={
+ Thu:["Chin-up or lat pulldown","Face pulls","Rear-delt raise","Pallof press","Ab wheel / hanging knee raise"],
+ Tue:["Barbell row","Bulgarian split squat (paused)","Cuff external rotation","Pull-up","Single-arm suitcase carry","Hanging knee raise"]};
+function isLegacyKey(key){return key.indexOf(BLOCK)!==0;}
+function legacyLabel(key){
+  var m=key.match(/^(\d+):acc:(\w+):(\d+)$/);
+  if(m){var list=OLD_ACC[m[2]]||[];return{week:+m[1],day:m[2],name:list[+m[3]]||("Accessory "+(+m[3]+1)),acc:true};}
+  m=key.match(/^(\d+):(squat|bench|deadlift|ohp)$/);
+  if(m)return{week:+m[1],day:OLD_DAY[m[2]],name:OLD_LIFTS[m[2]],acc:false};
+  return null;
+}
+function legacyWeeks(){
+  var byWeek={};
+  Object.keys(S.logs).forEach(function(key){
+    if(!isLegacyKey(key))return;
+    var L=legacyLabel(key);if(!L)return;
+    var sets=(S.logs[key]||{}).sets||[],parts=[];
+    sets.forEach(function(st){var x=fmtSet(st||{});if(x)parts.push(x);});
+    if(!parts.length)return;
+    (byWeek[L.week]=byWeek[L.week]||[]).push({day:L.day,name:L.name,acc:L.acc,sets:parts.join(", ")});
+  });
+  return Object.keys(byWeek).map(Number).sort(function(a,b){return a-b;}).map(function(wk){
+    var items=byWeek[wk].sort(function(a,b){return a.day===b.day?(a.acc-b.acc):(a.day==="Tue"?-1:1);});
+    return{week:wk,items:items};});
+}
+function oldDayName(d){return d+(d==="Tue"?" · Deadlift day":" · Squat day");}
+function legacyText(){
+  var wks=legacyWeeks();if(!wks.length)return "";
+  var out="PREVIOUS BLOCK — Strength System (12-week)";
+  wks.forEach(function(w){out+="\n\nWeek "+w.week;var day="";
+    w.items.forEach(function(it){if(it.day!==day){day=it.day;out+="\n  "+oldDayName(day);}out+="\n    "+it.name+": "+it.sets;});});
+  return out;
+}
+function legacyHTML(){
+  var wks=legacyWeeks();if(!wks.length)return "";
+  var n=wks.length;
+  return '<div class="ref"><button data-act="legacy">Previous block · '+n+' week'+(n===1?'':'s')+' of strength logs<span>'+(S.legacyOpen?'▲':'▼')+'</span></button>'+
+    (S.legacyOpen?'<div class="refbody"><p>Your Strength System logs from before this block. Read-only here — they are still in this device\'s storage, come out in the CSV as <b>Legacy</b> rows, and are included in Copy full log.</p>'+
+    wks.map(function(w){var day="",h='<h4>Week '+w.week+'</h4><p>';
+      w.items.forEach(function(it){if(it.day!==day){day=it.day;h+=(h.slice(-3)==='<p>'?'':'<br>')+'<b>'+oldDayName(day)+'</b>';}
+        h+='<br>'+esc(it.name)+': <span class="a">'+esc(it.sets)+'</span>';});
+      return h+'</p>';}).join("")+'</div>':'')+'</div>';
+}
+
 // ---------- session + full log text ----------
 function runLine(slot,label,target){
   var lg=S.runs[S.week+":"+slot]||{},bits=[];
@@ -271,6 +318,7 @@ function fullLogText(){
       if(parts.length)ln+="\n    "+a[0]+": "+parts.join(", ");});
     if(ln){found=true;out+="\n\nWeek "+wk+" · "+W.phase+" · "+weekRange(wk)+ln;}
   }
+  var lt=legacyText();if(lt){out+="\n\n"+lt;found=true;}
   return found?out:"Nothing logged yet.";
 }
 function flash(btn){if(!btn)return;var t=btn.getAttribute("data-lbl")||btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=t;},1200);}
@@ -299,7 +347,7 @@ function buildCSV(){
   Object.keys(S.logs).forEach(function(key){
     if(key.indexOf(BLOCK)===0)return;
     var sets=(S.logs[key]||{}).sets||[];
-    sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Legacy","","","",si+1,st.w||"",st.r||"","","","",key]);});});
+    sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!==""))){var L=legacyLabel(key)||{};rows.push(["Legacy",L.week||"",L.day||"",L.name||"",si+1,st.w||"",st.r||"","","","",key]);}});});
   return rows.map(function(r){return r.map(csvCell).join(",");}).join("\n");
 }
 function downloadCSV(btn){
@@ -332,7 +380,7 @@ function importCSV(text){
     var cat=g(r,"category"),key=g(r,"key"),wt=g(r,"weight"),rp=g(r,"reps");
     if(cat==="Max"){if(key)nRMs[key]=wt===""?"":Number(wt);}
     else if(cat==="Run"){if(!key)continue;var km=g(r,"distance"),tm=g(r,"time");nRuns[key]=nRuns[key]||{};if(km!=="")nRuns[key].km=km;if(tm!=="")nRuns[key].t=tm;}
-    else if(cat==="Lift"||cat==="Accessory"||cat==="Legacy"){
+    else if(cat==="Lift"||cat==="Main"||cat==="Accessory"||cat==="Legacy"){
       if(!key)continue;var si=parseInt(g(r,"set"),10);if(isNaN(si)||si<1)continue;
       var e=nLogs[key]=nLogs[key]||{sets:[]};e.sets[si-1]=e.sets[si-1]||{};
       if(wt!=="")e.sets[si-1].w=wt;if(rp!=="")e.sets[si-1].r=rp;}
@@ -451,6 +499,7 @@ function render(){
     '<p>You are coming back from injury. Sharp pain, or any niggle that changes how you run, means stop that session — not push through it. Missing one run costs nothing; missing three weeks costs the race.</p>'+
   '</div>':'')+'</div>'+
 
+  legacyHTML()+
   '<div class="btnrow"><button class="reset" data-act="reset">Reset logs</button>'+
   '<button class="reset" data-act="copyall" data-lbl="Copy full log">Copy full log</button></div>'+
   '<div class="btnrow"><button class="reset" data-act="export" data-lbl="Download CSV">Download CSV</button>'+
@@ -493,6 +542,7 @@ app.addEventListener("click",function(e){
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
   else if(b.dataset.act==="export"){downloadCSV(b);}
   else if(b.dataset.act==="import"){var fi=document.getElementById("csvfile");if(fi)fi.click();}
+  else if(b.dataset.act==="legacy"){S.legacyOpen=!S.legacyOpen;render();}
   else if(b.dataset.act==="reset"){if(confirm("Clear all logged runs and sets? Your maxes stay.")){S.logs={};S.runs={};persist();render();}}
 });
 render();
