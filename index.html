@@ -183,7 +183,7 @@ const SCHED=[
  ["Tue","Quality run","the hard one","quality","var(--sky)","Quality run","runs go anywhere"],
  ["Wed","Boxing","full session",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
  ["Thu","Strength","one full-body session","lift","var(--amber)","Strength","bodyweight version in the card"],
- ["Fri","Easy run or boxing","your call on the day","easy","var(--ink2)","Easy run or shadowboxing","your call"],
+ ["Fri","Swim","easy, zero impact before Sunday","swim","var(--ink2)","Swim or easy run","hotel pool, or a gentle run"],
  ["Sat","Rest","legs up before Sunday",null,"var(--ink4)","Rest","easy shakeout if you fancy"],
  ["Sun","Long run","with the group","long","var(--green)","Long run","runs go anywhere"]];
 
@@ -272,9 +272,9 @@ function legacyHTML(){
 }
 
 // ---------- session + full log text ----------
-function runLine(slot,label,target){
+function runLine(slot,label,target,unit){
   var lg=S.runs[S.week+":"+slot]||{},bits=[];
-  if(lg.km)bits.push(lg.km+" km");if(lg.t)bits.push(lg.t);
+  if(lg.km)bits.push(lg.km+" "+(unit||"km"));if(lg.t)bits.push(lg.t);
   return "\n  "+label+" — target "+target+(bits.length?" · logged "+bits.join(" / "):"");
 }
 function sessionText(){
@@ -284,8 +284,8 @@ function sessionText(){
   out+="\n\nRUNS";
   out+=runLine("long",(S.week===10?"Sun · RACE":"Sun · Long run"),w.long+" km");
   out+=runLine("quality","Tue · "+w.q.n+" ("+w.q.s+")","quality");
-  out+=runLine("easy","Fri · Easy run (or box instead)",w.easy[0]+" km");
-  out+="\n\nBOXING\n  Mon · technical, lighter\n  Wed · full session\n  Fri · optional, if you box instead of running";
+  out+=runLine("swim","Fri · Swim",(S.week===10?"15":"20–30")+" min easy","m");
+  out+="\n\nBOXING\n  Mon · technical, lighter\n  Wed · full session";
   out+="\n\nSTRENGTH (Thu)";
   MAINS.forEach(function(m){
     var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -304,9 +304,9 @@ function fullLogText(){
   var out="Half Marathon Block — training log",found=false;
   for(var wk=1;wk<=WEEKS.length;wk++){
     var W=WEEKS[wk-1],ln="";
-    [["long","Long run"],["quality","Quality"],["easy","Easy run"]].forEach(function(s){
+    [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"]].forEach(function(s){
       var lg=S.runs[wk+":"+s[0]]||{},bits=[];
-      if(lg.km)bits.push(lg.km+" km");if(lg.t)bits.push(lg.t);
+      if(lg.km)bits.push(lg.km+(s[0]==="swim"?" m":" km"));if(lg.t)bits.push(lg.t);
       if(bits.length)ln+="\n    "+s[1]+": "+bits.join(" / ");});
     MAINS.forEach(function(m){
       var lg=S.logs[BLOCK+wk+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -331,9 +331,9 @@ function buildCSV(){
   var rows=[["Category","Week","Day","Item","Set","Weight","Reps","Distance","Time","Done","Key"]];
   RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
   for(var wk=1;wk<=WEEKS.length;wk++){
-    [["long","Long run","Sun"],["quality","Quality","Tue"],["easy","Easy run",""]].forEach(function(s){
+    [["long","Long run","Sun"],["quality","Quality","Tue"],["easy","Easy run",""],["swim","Swim","Fri"]].forEach(function(s){
       var key=wk+":"+s[0],lg=S.runs[key]||{};
-      if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push(["Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
+      if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push([s[0]==="swim"?"Swim":"Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
     MAINS.forEach(function(m){
       var key=BLOCK+wk+":"+m.k,sets=(S.logs[key]||{}).sets||[];
       sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Lift",wk,"Thu",m.name,si+1,st.w||"",st.r||"","","","",key]);});});
@@ -379,7 +379,7 @@ function importCSV(text){
     var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
     var cat=g(r,"category"),key=g(r,"key"),wt=g(r,"weight"),rp=g(r,"reps");
     if(cat==="Max"){if(key)nRMs[key]=wt===""?"":Number(wt);}
-    else if(cat==="Run"){if(!key)continue;var km=g(r,"distance"),tm=g(r,"time");nRuns[key]=nRuns[key]||{};if(km!=="")nRuns[key].km=km;if(tm!=="")nRuns[key].t=tm;}
+    else if(cat==="Run"||cat==="Swim"){if(!key)continue;var km=g(r,"distance"),tm=g(r,"time");nRuns[key]=nRuns[key]||{};if(km!=="")nRuns[key].km=km;if(tm!=="")nRuns[key].t=tm;}
     else if(cat==="Lift"||cat==="Main"||cat==="Accessory"||cat==="Legacy"){
       if(!key)continue;var si=parseInt(g(r,"set"),10);if(isNaN(si)||si<1)continue;
       var e=nLogs[key]=nLogs[key]||{sets:[]};e.sets[si-1]=e.sets[si-1]||{};
@@ -391,17 +391,17 @@ function importCSV(text){
 }
 
 // ---------- views ----------
-function runHTML(slot,day,title,target,unit,spec,note,cls){
-  var key=S.week+":"+slot,lg=S.runs[key]||{};
+function runHTML(slot,day,title,target,unit,spec,note,cls,dl){
+  dl=dl||"km";var key=S.week+":"+slot,lg=S.runs[key]||{};
   return '<div class="run '+(cls||'')+'">'+
     '<div class="rtop"><div><div class="rname">'+day+' · '+esc(title)+'</div>'+
     (spec?'<div class="rspec">'+esc(spec)+'</div>':'')+'</div>'+
     '<div><div class="rt">'+target+'</div><div class="runit">'+unit+'</div></div></div>'+
     (note?'<div class="rnote">'+esc(note)+'</div>':'')+
-    '<div class="logrow"><span class="setn">km</span>'+
-    '<input inputmode="decimal" placeholder="km" data-run="'+key+'" data-f="km" value="'+(lg.km!=null?esc(lg.km):'')+'">'+
+    '<div class="logrow"><span class="setn">'+dl+'</span>'+
+    '<input inputmode="decimal" placeholder="'+dl+'" data-run="'+key+'" data-f="km" value="'+(lg.km!=null?esc(lg.km):'')+'">'+
     '<span class="setn">time</span>'+
-    '<input inputmode="text" placeholder="h:mm" data-run="'+key+'" data-f="t" value="'+(lg.t!=null?esc(lg.t):'')+'"></div></div>';
+    '<input inputmode="text" placeholder="'+(dl==="m"?"mm:ss":"h:mm")+'" data-run="'+key+'" data-f="t" value="'+(lg.t!=null?esc(lg.t):'')+'"></div></div>';
 }
 function mainHTML(m,trav){
   var w=WEEKS[S.week-1],W=liftW(m),T=liftTop(m),B=bigW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
@@ -478,7 +478,7 @@ function render(){
 
   runHTML("long","Sun",(S.week===10?"RACE — BYD Half":"Long run"),w.long,"km","easy, conversational",w.lnote,(S.week===10?"race":"key"))+
   runHTML("quality","Tue",w.q.n,w.q.s,"session","the one hard run",w.q.d,"key")+
-  runHTML("easy","Fri","Easy run or boxing",w.easy[0],"km","your call on the day","Run it conversational — this is the aerobic base your long run sits on. Prefer to box instead? Do that and just tick Friday off. Either way, keep it light two days out from the long run.","")+
+  runHTML("swim","Fri","Swim",(S.week===10?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
 
   liftHTML()+
   '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
@@ -490,7 +490,7 @@ function render(){
     '<h4>Strength is maintenance now</h4>'+
     '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. What actually preserves strength is <span class="a">intensity, not volume</span>, so squat and bench are built like a proper maintenance day: work up to <b>one clean top triple</b> at 77–85%, then a couple of crisp back-off fives. Brace hard, own the descent, never grind a rep. The conventional deadlift stays out — it costs more recovery than it returns while you are running — but the Romanian deadlift is now a real lift off your deadlift max, not an afterthought, because a strong posterior chain is your best protection against running injuries. Rows and pull-ups keep the back honest; the <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
     '<h4>Boxing alongside the running</h4>'+
-    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Monday stays technical and light because you ran long the day before. Friday is yours to choose — an easy run or a boxing session, whichever you feel like — but keep it light either way, because it sits two days out from the long run. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
+    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Monday stays technical and light because you ran long the day before. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
     '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
