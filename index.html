@@ -162,19 +162,21 @@ const WEEKS=[
 const PHASE={Base:"#a3a3a3",Build:"var(--amber)",Cutback:"var(--green)",Peak:"var(--red)",Taper:"var(--green)",Race:"var(--red)"};
 
 const MAINS=[
- {k:"squat",name:"Back squat",rm:"squat",reps:5,adj:0,
-  note:"Heavy-ish but crisp. Stop well short of failure — you run tomorrow.",
+ {k:"squat",name:"Back squat",rm:"squat",reps:5,top:3,topAdj:.075,adj:0,
+  note:"Brace hard before every rep, own the descent, drive up through the whole foot. The top triple is the strength stimulus — make it clean, never a grind. Back-offs stay crisp.",
   fallback:"Goblet or split squat — 3 × 10 / leg @ RPE 7"},
- {k:"bench",name:"Bench press",rm:"bench",reps:5,adj:0,
-  note:"Swap for overhead press any week you fancy the change.",
-  fallback:"Push-ups — 3 sets, stop 2 reps short"}];
+ {k:"bench",name:"Bench press",rm:"bench",reps:5,top:3,topAdj:.075,adj:0,
+  note:"Feet planted, shoulder blades pinned, a beat of pause on the chest. Swap for overhead press any week you fancy the change.",
+  fallback:"Push-ups — 3 sets, stop 2 reps short"},
+ {k:"rdl",name:"Romanian deadlift",rm:"deadlift",reps:6,fixed:.65,
+  note:"Hinge from the hips, soft knees, bar glued to the legs. Hamstrings, not lower back. This is what keeps your posterior chain strong for the running.",
+  fallback:"Single-leg RDL — 3 × 10 / leg, bodyweight or a loaded bag"}];
 
 const ACC=[
+ ["Barbell row","3 sets × 8 reps","~40kg · chest to the bar, no heaving from the hips"],
  ["Pull-up","3 sets × 6–8 reps","BW · band-assist or +load to fit reps"],
- ["Romanian deadlift","2 sets × 8 reps","~60–70kg · hinge from the hips, hamstrings not lower back"],
  ["Calf raise","2 sets × 15 reps","BW or ~20kg · your best insurance against calf and achilles trouble"],
- ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"],
- ["Pallof press","2 sets × 10 reps each side","~10–15kg or band"]];
+ ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
 
 const SCHED=[
  ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
@@ -214,7 +216,13 @@ function parseSets(p){var m=String(p).match(/^\s*(\d+)\s*sets?/i);return m?+m[1]
 function parseReps(p){var m=String(p).match(/[×x]\s*(\d+)/);return m?+m[1]:0;}
 const K=()=>BLOCK+S.week;
 function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
-function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(w.pct+m.adj)):0;}
+function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(m.fixed!=null?m.fixed:(w.pct+(m.adj||0)))):0;}
+function liftTop(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return (rm&&m.top)?r25(rm*(w.pct+m.topAdj)):0;}
+function bigW(m){return m.top?liftTop(m):liftW(m);}
+function pctStr(p){return Math.round(p*100)+"%";}
+function liftSpec(m){var w=WEEKS[S.week-1],n=w.sets;
+  if(m.top){var bo=Math.max(n-1,0);return "Top 1 × "+m.top+" @ "+pctStr(w.pct+m.topAdj)+(bo?" · then "+bo+" × "+m.reps+" @ "+pctStr(w.pct):"");}
+  return n+" × "+m.reps+" @ "+pctStr(m.fixed);}
 
 // ---------- session + full log text ----------
 function runLine(slot,label,target){
@@ -233,9 +241,9 @@ function sessionText(){
   out+="\n\nBOXING\n  Mon · technical, lighter\n  Wed · full session\n  Fri · optional, if you box instead of running";
   out+="\n\nSTRENGTH (Thu)";
   MAINS.forEach(function(m){
-    var W=liftW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
+    var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
     sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
-    out+="\n  "+m.name+" — "+w.sets+" × "+m.reps+" @ "+Math.round((w.pct+m.adj)*100)+"%"+(W?" · "+fmt(W)+"kg":"");
+    out+="\n  "+m.name+" — "+liftSpec(m)+(B?" · "+fmt(B)+"kg"+(m.top?" top":""):"");
     out+="\n    logged: "+(parts.length?parts.join(", "):"—");});
   out+="\n\nACCESSORIES";
   ACC.forEach(function(a,idx){
@@ -348,14 +356,15 @@ function runHTML(slot,day,title,target,unit,spec,note,cls){
     '<input inputmode="text" placeholder="h:mm" data-run="'+key+'" data-f="t" value="'+(lg.t!=null?esc(lg.t):'')+'"></div></div>';
 }
 function mainHTML(m,trav){
-  var w=WEEKS[S.week-1],W=liftW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
-  for(var si=0;si<w.sets;si++){var st=wl[si]||{};
-    rows+='<div class="logrow"><span class="setn">Set '+(si+1)+'</span><input inputmode="decimal" placeholder="'+(W?fmt(W):'kg')+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+m.reps+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
+  var w=WEEKS[S.week-1],W=liftW(m),T=liftTop(m),B=bigW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
+  for(var si=0;si<w.sets;si++){var st=wl[si]||{},isTop=!!(m.top&&si===0);
+    var ph=isTop?(T?fmt(T):'kg'):(W?fmt(W):'kg'),reps=isTop?m.top:m.reps,lbl=isTop?'Top':'Set '+(m.top?si:si+1);
+    rows+='<div class="logrow"><span class="setn">'+lbl+'</span><input inputmode="decimal" placeholder="'+ph+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+reps+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
   return '<div class="main"><div class="mtop"><div><div class="mname">'+m.name+'</div>'+
-    '<div class="mspec">'+w.sets+' × '+m.reps+' · '+Math.round((w.pct+m.adj)*100)+'%</div></div>'+
-    '<div><div class="wt" id="wt-'+m.k+'">'+(W?fmt(W):'—')+'</div><div class="unit">kg</div></div></div>'+
+    '<div class="mspec">'+liftSpec(m)+'</div></div>'+
+    '<div><div class="wt" id="wt-'+m.k+'">'+(B?fmt(B):'—')+'</div><div class="unit">'+(m.top?'kg top':'kg')+'</div></div></div>'+
     (m.note?'<div class="mnote">'+esc(m.note)+'</div>':'')+
-    ((W&&!trav)?'<div class="ramp">Ramp: '+ramp(W).join("  →  ")+'  →  <b>work</b></div>':'')+
+    ((B&&!trav)?'<div class="ramp">Ramp: '+ramp(B).join("  →  ")+'  →  <b>work</b></div>':'')+
     (trav?'<div class="fallback"><b>Barbell if available.</b> Otherwise: '+esc(m.fallback)+'</div>':'')+
     rows+'</div>';
 }
@@ -431,7 +440,7 @@ function render(){
     '<h4>Easy means easy</h4>'+
     '<p>Roughly <span class="g">80%</span> of your running should be conversational — able to speak full sentences. Most people ruin a block by running their easy days too hard and their hard days too soft. The Tuesday session and the Sunday long run are the only two that matter; everything else is just getting blood to the legs.</p>'+
     '<h4>Strength is maintenance now</h4>'+
-    '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. Keep the load heavy-ish, keep the volume low, never go to failure. Deadlift drops out as a main lift because it costs more recovery than it returns while you are running; the RDL covers the hinge. The <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
+    '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. What actually preserves strength is <span class="a">intensity, not volume</span>, so squat and bench are built like a proper maintenance day: work up to <b>one clean top triple</b> at 77–85%, then a couple of crisp back-off fives. Brace hard, own the descent, never grind a rep. The conventional deadlift stays out — it costs more recovery than it returns while you are running — but the Romanian deadlift is now a real lift off your deadlift max, not an afterthought, because a strong posterior chain is your best protection against running injuries. Rows and pull-ups keep the back honest; the <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
     '<h4>Boxing alongside the running</h4>'+
     '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Monday stays technical and light because you ran long the day before. Friday is yours to choose — an easy run or a boxing session, whichever you feel like — but keep it light either way, because it sits two days out from the long run. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
@@ -455,7 +464,7 @@ app.addEventListener("input",function(e){
   var t=e.target;
   if(t.dataset.rm){
     var v=t.value;S.oneRMs[t.dataset.rm]=v===""?"":Number(v);persist();
-    MAINS.forEach(function(m){var el=document.getElementById("wt-"+m.k);if(el){var W=liftW(m);el.textContent=W?fmt(W):"—";}});
+    MAINS.forEach(function(m){var el=document.getElementById("wt-"+m.k);if(el){var B=bigW(m);el.textContent=B?fmt(B):"—";}});
   }else if(t.dataset.log){
     var key=t.dataset.log,si=+t.dataset.set,f=t.dataset.f;
     var o=S.logs[key]=S.logs[key]||{};var arr=o.sets=o.sets||[];arr[si]=arr[si]||{};arr[si][f]=t.value;persist();
