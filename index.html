@@ -181,7 +181,7 @@ const SCHED=[
  ["Tue","Quality run","the hard one","quality","var(--sky)","Quality run","runs go anywhere"],
  ["Wed","Boxing","full session",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
  ["Thu","Strength","one full-body session","lift","var(--amber)","Strength","bodyweight version in the card"],
- ["Fri","HIIT / crossfit","your hard one",null,"var(--ink2)","Bodyweight circuit","5 rounds, hard"],
+ ["Fri","Easy run or boxing","your call on the day","easy","var(--ink2)","Easy run or shadowboxing","your call"],
  ["Sat","Rest","legs up before Sunday",null,"var(--ink4)","Rest","easy shakeout if you fancy"],
  ["Sun","Long run","with the group","long","var(--green)","Long run","runs go anywhere"]];
 
@@ -215,8 +215,6 @@ function parseReps(p){var m=String(p).match(/[×x]\s*(\d+)/);return m?+m[1]:0;}
 const K=()=>BLOCK+S.week;
 function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
 function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(w.pct+m.adj)):0;}
-// Weeks where Friday HIIT would eat into Sunday's long run.
-function hardWeek(w){return w.long>=17||w.phase==="Taper"||w.phase==="Race";}
 
 // ---------- session + full log text ----------
 function runLine(slot,label,target){
@@ -231,8 +229,8 @@ function sessionText(){
   out+="\n\nRUNS";
   out+=runLine("long",(S.week===10?"Sun · RACE":"Sun · Long run"),w.long+" km");
   out+=runLine("quality","Tue · "+w.q.n+" ("+w.q.s+")","quality");
-  out+=runLine("easy","Easy run (any day)",w.easy[0]+" km");
-  out+="\n\nCROSS-TRAINING\n  Mon · Boxing — technical\n  Wed · Boxing\n  Fri · HIIT / crossfit"+(hardWeek(w)?" — keep it upper-body, Sunday is the priority":"");
+  out+=runLine("easy","Fri · Easy run (or box instead)",w.easy[0]+" km");
+  out+="\n\nBOXING\n  Mon · technical, lighter\n  Wed · full session\n  Fri · optional, if you box instead of running";
   out+="\n\nSTRENGTH (Thu)";
   MAINS.forEach(function(m){
     var W=liftW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -380,7 +378,7 @@ function liftHTML(){
     '<ul>'+ACC.map(accHTML).join("")+'</ul></div></div>';
 }
 function render(){
-  var w=WEEKS[S.week-1],td=todayDay(),isNow=(S.week===currentWeek()),easeFri=hardWeek(w);
+  var w=WEEKS[S.week-1],td=todayDay(),isNow=(S.week===currentWeek());
   var doneCount=SCHED.filter(function(s){return !!S.sessions[K()+":"+s[0]];}).length;
   var anyT=SCHED.some(function(s){return !!S.travel[K()+":"+s[0]];});
   var weekT=function(n){return Object.keys(S.travel).some(function(k){return k.indexOf(BLOCK+n+":")===0&&S.travel[k];});};
@@ -414,7 +412,6 @@ function render(){
   '<div class="sched">'+SCHED.map(function(s){
     var d=s[0],t=!!S.travel[K()+":"+d],done=!!S.sessions[K()+":"+d];
     var label=t?s[5]:s[1],sub=t?s[6]:s[2];
-    if(d==="Fri"&&!t&&easeFri)sub="keep it upper-body — Sunday is the priority";
     if(S.week===10&&d==="Sun"){label="RACE — 21.1 km";sub="you have done the work";}
     return '<div class="srow '+(t?'trow':'')+' '+(done?'done':'')+' '+((isNow&&d===td)?'today':'')+'">'+
       '<button class="chk '+(done?'on':'')+'" data-sess="'+d+'" aria-label="Mark '+d+' done">'+(done?'✓':'')+'</button>'+
@@ -424,7 +421,7 @@ function render(){
 
   runHTML("long","Sun",(S.week===10?"RACE — BYD Half":"Long run"),w.long,"km","easy, conversational",w.lnote,(S.week===10?"race":"key"))+
   runHTML("quality","Tue",w.q.n,w.q.s,"session","the one hard run",w.q.d,"key")+
-  runHTML("easy","Any day","Easy run · 3rd run",w.easy[0],"km","optional but valuable","Tag it onto a boxing day or use Saturday as a shakeout. Conversational pace — this is the aerobic base your long run sits on.","")+
+  runHTML("easy","Fri","Easy run or boxing",w.easy[0],"km","your call on the day","Run it conversational — this is the aerobic base your long run sits on. Prefer to box instead? Do that and just tick Friday off. Either way, keep it light two days out from the long run.","")+
 
   liftHTML()+
   '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
@@ -435,8 +432,8 @@ function render(){
     '<p>Roughly <span class="g">80%</span> of your running should be conversational — able to speak full sentences. Most people ruin a block by running their easy days too hard and their hard days too soft. The Tuesday session and the Sunday long run are the only two that matter; everything else is just getting blood to the legs.</p>'+
     '<h4>Strength is maintenance now</h4>'+
     '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. Keep the load heavy-ish, keep the volume low, never go to failure. Deadlift drops out as a main lift because it costs more recovery than it returns while you are running; the RDL covers the hinge. The <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
-    '<h4>Boxing and HIIT alongside the running</h4>'+
-    '<p>Boxing is great aerobic work with low running impact — Monday stays technical and light because you ran long the day before. The one to watch is <span class="a">Friday HIIT</span>: it lands two days before your long run, and in the heavy weeks that is enough to blunt the session that matters most. From week 6 onward the app flags Friday automatically — on those days keep it upper-body and skip the heavy leg volume (squat jumps, box jumps, wall balls, heavy lunges). Three hard days a week is the ceiling: Tuesday, Friday and Sunday. Everything else stays genuinely easy.</p>'+
+    '<h4>Boxing alongside the running</h4>'+
+    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Monday stays technical and light because you ran long the day before. Friday is yours to choose — an easy run or a boxing session, whichever you feel like — but keep it light either way, because it sits two days out from the long run. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
     '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
