@@ -70,6 +70,19 @@
   .nextb b{color:var(--ink)} .nextb .p{font-family:var(--mono);font-size:10px;color:var(--ink3)}
   .bar{height:4px;background:#2a2a2a;border-radius:2px;margin-top:6px;overflow:hidden}
   .bar div{height:100%;background:var(--green);border-radius:2px}
+  .day.mob{border-color:rgba(52,211,153,.3)}
+  .mobhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .rt small{font-size:13px;color:var(--ink4)}
+  .mobsec{margin:16px 0 2px;color:var(--green)}
+  .mobrow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+  .mobsec+.mobrow{border-top:none}
+  .mobtxt{flex:1;min-width:0}
+  .mobtop{display:flex;justify-content:space-between;gap:8px}
+  .mobname{font-size:13px;color:var(--ink)}
+  .mobtop .p{font-family:var(--mono);font-size:11px;color:var(--ink3);white-space:nowrap}
+  .mobcue{font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.45}
+  .mobrow.done .mobname{text-decoration:line-through;opacity:.5}
+  .mobrow.done .mobcue{opacity:.4}
   .dot{width:4px;height:4px;border-radius:50%}
   .wk .plane{position:absolute;top:3px;right:4px;font-size:9px;color:var(--sky);font-family:var(--sans)}
   .wkhead{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
@@ -201,21 +214,67 @@ const ACC=[
  ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
 
 const SCHED=[
- ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
+ ["Mon","Mobility","35–40 min, routine below","mob","var(--green)","Mobility","routine below"],
  ["Tue","Quality run","the hard one","quality","var(--sky)","Quality run","runs go anywhere"],
  ["Wed","Boxing","full session",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
  ["Thu","Strength","one full-body session","lift","var(--amber)","Strength","bodyweight version in the card"],
  ["Fri","Swim","easy, zero impact before Sunday","swim","var(--ink2)","Swim or easy run","hotel pool, or a gentle run"],
- ["Sat","Rest","legs up before Sunday",null,"var(--ink4)","Rest","easy shakeout if you fancy"],
+ ["Sat","Boxing — light","technical only, long run tomorrow",null,"var(--ink2)","Shadowboxing","light, technical"],
  ["Sun","Long run","with the group","long","var(--green)","Long run","runs go anywhere"]];
+
+// Week 1 ran before the mobility day; race week rests on Saturday.
+function schedFor(n){return SCHED.map(function(s){
+  if(n===1&&s[0]==="Mon")return ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)"];
+  if(n===1&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
+  if(n===10&&s[0]==="Sat")return ["Sat","Rest","race tomorrow — feet up",null,"var(--ink4)"];
+  return s;});}
+
+// Monday mobility: [section, exercise, dose, cue, minutes, eccentric (dropped in race week)]
+const MOB=[
+ ["Breathe & loosen","Cat-cow","10 slow reps","Move one segment of the spine at a time. Gets the back moving before anything is held.",2],
+ ["Breathe & loosen","Child's pose, breathing","1 min","Big slow breaths into your lower back and sides. Let the hips sink back.",1],
+ ["Hips & glutes","90/90 hip switches","2 × 8 each way","Sit tall, rotate both knees side to side slowly. Hands behind you for support if needed.",3],
+ ["Hips & glutes","Half-kneeling hip flexor stretch","2 × 45 s each side","Squeeze the back leg's glute and tuck the pelvis. Feel it at the front of the hip, not the low back.",3],
+ ["Hips & glutes","Pigeon pose (or figure-4 lying down)","90 s each side","Deep glute stretch. Use figure-4 on your back if pigeon pinches the knee.",3],
+ ["Hips & glutes","Frog stretch","90 s","Inner thighs and groin. Rock gently forward and back; never force the depth.",2],
+ ["Hamstrings & low back","Strap hamstring stretch, lying down","2 × 45 s each leg","Leg straight, lower back flat on the floor. A towel or belt works as the strap.",3],
+ ["Hamstrings & low back","Supine twist","60 s each side","Knees drop to one side, both shoulders stay down. Easy on the low back.",2],
+ ["Hamstrings & low back","Slider hamstring curl, slow lowering","2 × 6","Bridge up, heels on a towel. Take 4–5 s to slide the legs out. This is the hamstring-strain protection.",3,1],
+ ["Calves, achilles & feet","Wall calf stretch, straight knee","60 s each leg","Back heel down, knee locked. Works the big calf muscle.",2],
+ ["Calves, achilles & feet","Wall calf stretch, bent knee","60 s each leg","Same position, back knee bent. Works the soleus, which runners usually neglect.",2],
+ ["Calves, achilles & feet","Eccentric heel drops off a step","2 × 10 each leg","Up on two feet, lower on one over 3 s. One set knee straight, one set knee bent.",3,1],
+ ["Calves, achilles & feet","Tibialis raises against a wall","2 × 15","Back to the wall, heels down, lift the toes. Shins and ankles.",2],
+ ["Calves, achilles & feet","Foot roll on a ball","60 s each foot","Tennis or lacrosse ball under the arch. Slow and firm, never painful.",2],
+ ["End-range strength","Deep squat hold","3 × 30 s","Hold a door frame if you need to. Heels down, chest up.",2],
+ ["End-range strength","Copenhagen plank, short lever","2 × 15 s each side","Top knee on a bench, lift the hips. Protects against groin strains. Skip if the groin is sore.",2,1],
+ ["Finish","Legs up the wall","2 min","Slow breathing. You're done when your breathing has settled.",2]];
+function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(S.week===10&&x.m[5]);});}
+function mobHTML(){
+  if(S.week===1)return "";
+  var items=mobItems(),done=items.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length,
+      mins=items.reduce(function(a,x){return a+x.m[4];},0),open=S.mobOpen!==false,sec="";
+  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">Mon · Mobility</div>'+
+    '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div></div>'+
+    '<div class="rt" style="color:var(--green)">'+done+'<small>/'+items.length+'</small></div></div>'+
+    '<div class="bar"><div style="width:'+Math.round(done/items.length*100)+'%"></div></div>'+
+    '<div class="rnote">Stretch to about 4–5 out of 10, never into pain. Breathe out into each hold, no bouncing. If an area is freshly strained, skip it this week.'+
+    (S.week===10?' <b>Race week:</b> the slow-lowering work and Copenhagen plank are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
+    '<button class="copybtn" data-act="mobopen">'+(open?'Hide routine ▲':'Show routine ▼')+'</button>';
+  if(open){h+='<div class="moblist">';items.forEach(function(x){var m=x.m,on=!!S.mob[K()+":mob:"+x.i];
+      if(m[0]!==sec){sec=m[0];h+='<div class="lbl mobsec">'+esc(sec)+'</div>';}
+      h+='<div class="mobrow'+(on?' done':'')+'"><button class="chk '+(on?'on':'')+'" data-mob="'+x.i+'" aria-label="Mark '+esc(m[1])+' done">'+(on?'✓':'')+'</button>'+
+        '<div class="mobtxt"><div class="mobtop"><span class="mobname">'+esc(m[1])+'</span><span class="p">'+esc(m[2])+'</span></div>'+
+        '<div class="mobcue">'+esc(m[3])+'</div></div></div>';});
+    h+='</div>';}
+  return h+'</div>';}
 
 const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},ref:false,block:null,view:"new",oweek:8};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},ref:false,block:null,view:"new",oweek:8};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
-if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
+S.mob=S.mob||{};if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
 function dOnly(d){d.setHours(0,0,0,0);return d;}
@@ -359,7 +418,7 @@ function oldSessionText(){
 // ---- rewards: everything clocked in, across both blocks ----
 function num(v){var n=parseFloat(String(v==null?"":v).replace(",","."));return isNaN(n)?0:n;}
 function stats(){
-  var st={sessions:0,runs:0,km:0,longest:0,swims:0,swimM:0,sets:0,kg:0,lifts:0,streak:0,best:0};
+  var st={sessions:0,runs:0,km:0,longest:0,swims:0,swimM:0,sets:0,kg:0,lifts:0,streak:0,best:0,mobility:0};
   Object.keys(S.sessions).forEach(function(k){if(S.sessions[k])st.sessions++;});
   Object.keys(S.runs).forEach(function(k){var r=S.runs[k]||{};if(!(r.km||r.t))return;
     if(/:swim$/.test(k)){st.swims++;st.swimM+=num(r.km);}else{st.runs++;var d=num(r.km);st.km+=d;if(/:long$/.test(k)&&d>st.longest)st.longest=d;}});
@@ -367,6 +426,9 @@ function stats(){
   Object.keys(S.logs).forEach(function(k){var sets=(S.logs[k]||{}).sets||[];sets.forEach(function(x){if(!x||!fmtSet(x))return;st.sets++;var w=num(x.w),r=num(x.r);if(w&&r)st.kg+=w*r;
     var wk=k.indexOf(BLOCK)===0?BLOCK+k.slice(BLOCK.length).split(":")[0]:k.split(":")[0];liftKeys[wk]=1;});});
   st.lifts=Object.keys(liftKeys).length;
+  // a mobility session counts once 75% of that week's routine is ticked
+  st.mobility=WEEKS.filter(function(w){if(w.n===1)return false;var n=0,c=0;
+    MOB.forEach(function(m,i){if(w.n===10&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
   // a week "counts" with 4+ sessions ticked; streak = consecutive counted weeks ending at the latest one
   var done=function(pre){return SCHED.filter(function(x){return !!S.sessions[pre+x[0]];}).length>=4;};
   var seq=OLD_WEEKS.map(function(w){return done(w.n+":");}).concat(WEEKS.map(function(w){return done(BLOCK+w.n+":");}));
@@ -379,6 +441,7 @@ const BADGES=[
  ["Three-week streak","best",3],["Six-week streak","best",6],["Ten-week streak","best",10],
  ["50 km run","km",50],["100 km run","km",100],["200 km run","km",200],
  ["Long run 15 km+","longest",15],["Long run 19 km — peak","longest",19],["21.1 km — the half","longest",21.1],
+ ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — 9 sessions","mobility",9],
  ["10 tonnes lifted","kg",10000],["25 tonnes lifted","kg",25000],["50 tonnes lifted","kg",50000]];
 function fmtBig(v,k){return k==="kg"?(v>=1000?(Math.round(v/100)/10)+" t":Math.round(v)+" kg"):k==="km"||k==="longest"?(Math.round(v*10)/10)+" km":String(v);}
 function rewardHTML(){
@@ -389,7 +452,7 @@ function rewardHTML(){
   return '<div class="card rew"><div class="lbl">Clocked in · both blocks</div>'+
     '<div class="rgrid">'+tile(st.sessions,"sessions")+tile(st.streak+(st.best>st.streak?'<small>/'+st.best+'</small>':''),"week streak")+
     tile(Math.round(st.km),"km run")+tile(st.kg>=1000?(Math.round(st.kg/100)/10)+"t":Math.round(st.kg),"kg lifted")+'</div>'+
-    '<div class="rsub">'+st.runs+' runs · longest '+fmtBig(st.longest,"km")+' · '+st.lifts+' lift days · '+st.sets+' sets'+(st.swims?' · '+st.swims+' swims':'')+'</div>'+
+    '<div class="rsub">'+st.runs+' runs · longest '+fmtBig(st.longest,"km")+' · '+st.lifts+' lift days · '+st.sets+' sets'+(st.swims?' · '+st.swims+' swims':'')+(st.mobility?' · '+st.mobility+' mobility':'')+'</div>'+
     (earned.length?'<div class="badges">'+earned.map(function(b){return '<span class="badge2">✓ '+b[0]+'</span>';}).join("")+'</div>':'')+
     (next?'<div class="nextb"><span>Next: <b>'+next[0]+'</b></span><span class="p">'+fmtBig(st[next[1]],next[1])+' / '+fmtBig(next[2],next[1])+'</span></div>'+
       '<div class="bar"><div style="width:'+Math.min(100,Math.round(st[next[1]]/next[2]*100))+'%"></div></div>':'')+'</div>';}
@@ -431,12 +494,13 @@ function moveWeek(from,to){
     if(k.indexOf(pt)===0)return;             // target's old data is dropped (caller confirmed)
     out[k.indexOf(pf)===0?pt+k.slice(pf.length):k]=obj[k];});return out;};
   S.logs=mv(S.logs,BLOCK+from+":",BLOCK+to+":");S.sessions=mv(S.sessions,BLOCK+from+":",BLOCK+to+":");
-  S.travel=mv(S.travel,BLOCK+from+":",BLOCK+to+":");S.runs=mv(S.runs,from+":",to+":");
+  S.travel=mv(S.travel,BLOCK+from+":",BLOCK+to+":");S.mob=mv(S.mob,BLOCK+from+":",BLOCK+to+":");S.runs=mv(S.runs,from+":",to+":");
   S.week=to;persist();render();}
 function weekHasData(n){var a=BLOCK+n+":",b=n+":";
   return Object.keys(S.logs).some(function(k){return k.indexOf(a)===0&&((S.logs[k]||{}).sets||[]).some(function(st){return st&&fmtSet(st);});})||
          Object.keys(S.runs).some(function(k){return k.indexOf(b)===0&&(S.runs[k].km||S.runs[k].t);})||
-         Object.keys(S.sessions).some(function(k){return k.indexOf(a)===0;});}
+         Object.keys(S.sessions).some(function(k){return k.indexOf(a)===0;})||
+         Object.keys(S.mob).some(function(k){return k.indexOf(a)===0;});}
 
 function renderOld(){
   var w=OLD_WEEKS[S.oweek-1],pre=S.oweek+":";
@@ -473,7 +537,9 @@ function sessionText(){
   out+=runLine("long",(S.week===10?"Sun · RACE":"Sun · Long run"),w.long+" km");
   out+=runLine("quality","Tue · "+w.q.n+" ("+w.q.s+")","quality");
   out+=runLine("swim","Fri · Swim",(S.week===10?"15":"20–30")+" min easy","m");
-  out+="\n\nBOXING\n  Mon · technical, lighter\n  Wed · full session";
+  if(S.week>1){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
+    out+="\n\nMOBILITY (Mon)\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
+  out+="\n\nBOXING"+(S.week===1?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week===1||S.week===10)?"":"\n  Sat · light and technical — long run tomorrow");
   out+="\n\nSTRENGTH (Thu)";
   MAINS.forEach(function(m){
     var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -529,6 +595,8 @@ function buildCSV(){
       sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Accessory",wk,"Thu",a[0],si+1,st.w||"",st.r||"","","","",key]);});});
   }
   Object.keys(S.sessions).forEach(function(key){if(S.sessions[key])rows.push(["Session","","","","","","","","","yes",key]);});
+  Object.keys(S.mob).forEach(function(key){if(!S.mob[key])return;var p=key.slice(BLOCK.length).split(":"),it=MOB[+p[2]];
+    rows.push(["Mobility",p[0],"Mon",it?it[1]:"","","","","","","yes",key]);});
   // Anything logged in an earlier block stays exportable.
   Object.keys(S.logs).forEach(function(key){
     if(key.indexOf(BLOCK)===0)return;
@@ -559,7 +627,7 @@ function importCSV(text){
   var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
   ["category","week","day","item","set","weight","reps","distance","time","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
   if(ci.category<0||ci.key<0)return false;
-  var nLogs={},nRuns={},nSess={},nTrav={},nRMs=Object.assign({},S.oneRMs);
+  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nRMs=Object.assign({},S.oneRMs);
   var g=function(r,n){return ci[n]>=0?(r[ci[n]]||"").trim():"";};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
@@ -571,9 +639,10 @@ function importCSV(text){
       var e=nLogs[key]=nLogs[key]||{sets:[]};e.sets[si-1]=e.sets[si-1]||{};
       if(wt!=="")e.sets[si-1].w=wt;if(rp!=="")e.sets[si-1].r=rp;}
     else if(cat==="Session"){if(key)nSess[key]=true;}
+    else if(cat==="Mobility"){if(key)nMob[key]=true;}
     else if(cat==="Travel"){if(key)nTrav[key]=true;}
   }
-  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;persist();render();return true;
+  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;persist();render();return true;
 }
 
 // ---------- views ----------
@@ -643,12 +712,13 @@ function render(){
   '<div class="dates">'+weekRange(S.week)+(isNow?' · this week':'')+'</div></div>'+
   '<span class="hint">tap ✓ when done</span></div>'+
 
-  schedHTML(SCHED.map(function(s){return [s[0],s[1],s[2],null,null,s[4]];}),K()+":",isNow,td,S.week===10)+
+  schedHTML(schedFor(S.week).map(function(s){return [s[0],s[1],s[2],null,null,s[4]];}),K()+":",isNow,td,S.week===10)+
 
   runHTML("long","Sun",(S.week===10?"RACE — BYD Half":"Long run"),w.long,"km","easy, conversational",w.lnote,(S.week===10?"race":"key"))+
   runHTML("quality","Tue",w.q.n,w.q.s,"session","the one hard run",w.q.d,"key")+
   runHTML("swim","Fri","Swim",(S.week===10?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
 
+  mobHTML()+
   liftHTML()+
   '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
 
@@ -658,8 +728,10 @@ function render(){
     '<p>Roughly <span class="g">80%</span> of your running should be conversational — able to speak full sentences. Most people ruin a block by running their easy days too hard and their hard days too soft. The Tuesday session and the Sunday long run are the only two that matter; everything else is just getting blood to the legs.</p>'+
     '<h4>Strength is maintenance now</h4>'+
     '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. What actually preserves strength is <span class="a">intensity, not volume</span>, so squat and bench are built like a proper maintenance day: work up to <b>one clean top triple</b> at 77–85%, then a couple of crisp back-off fives. Brace hard, own the descent, never grind a rep. The conventional deadlift stays out — it costs more recovery than it returns while you are running — but the Romanian deadlift is now a real lift off your deadlift max, not an afterthought, because a strong posterior chain is your best protection against running injuries. Rows and pull-ups keep the back honest; the <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
+    '<h4>Monday mobility</h4>'+
+    '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of slow-lowering work: slider hamstring curls, heel drops and the Copenhagen plank. That eccentric strength is what makes hamstrings, calves and groin harder to strain. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
     '<h4>Boxing alongside the running</h4>'+
-    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Monday stays technical and light because you ran long the day before. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
+    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Wednesday is the full session. Saturday stays light and technical — pads, footwork and drills, no hard conditioning rounds — because you run long the next morning. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
     '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
@@ -708,6 +780,11 @@ app.addEventListener("click",function(e){
     if(weekHasData(to)&&!confirm("Week "+to+" already has logs. They will be REPLACED by week "+from+"'s. Continue?"))return;
     moveWeek(from,to);}
   else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;if(S.sessions[k])delete S.sessions[k];else S.sessions[k]=true;persist();render();}
+  else if(b.dataset.mob){var mk=K()+":mob:"+b.dataset.mob;
+    if(S.mob[mk])delete S.mob[mk];
+    else{S.mob[mk]=true;if(mobItems().every(function(x){return S.mob[K()+":mob:"+x.i];}))S.sessions[K()+":Mon"]=true;} // finishing the routine ticks Monday
+    persist();render();}
+  else if(b.dataset.act==="mobopen"){S.mobOpen=!(S.mobOpen!==false);persist();render();}
   else if(b.dataset.act==="copyweek"){copyText(S.view==="old"?oldSessionText():sessionText(),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
