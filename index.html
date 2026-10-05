@@ -214,7 +214,7 @@ const ACC=[
  ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
 
 const SCHED=[
- ["Mon","Mobility","35–40 min, routine below","mob","var(--green)","Mobility","routine below"],
+ ["Mon","Mobility","~40 min, routine below","mob","var(--green)","Mobility","routine below"],
  ["Tue","Quality run","the hard one","quality","var(--sky)","Quality run","runs go anywhere"],
  ["Wed","Boxing","full session",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
  ["Thu","Strength","one full-body session","lift","var(--amber)","Strength","bodyweight version in the card"],
@@ -222,43 +222,44 @@ const SCHED=[
  ["Sat","Boxing — light","technical only, long run tomorrow",null,"var(--ink2)","Shadowboxing","light, technical"],
  ["Sun","Long run","with the group","long","var(--green)","Long run","runs go anywhere"]];
 
-// Week 1 ran before the mobility day; race week rests on Saturday.
+// Mobility Mondays (and Saturday boxing) start in week 3; race week rests on Saturday.
+const MOB_FROM=3;
 function schedFor(n){return SCHED.map(function(s){
-  if(n===1&&s[0]==="Mon")return ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)"];
-  if(n===1&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
+  if(n<MOB_FROM&&s[0]==="Mon")return ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)"];
+  if(n<MOB_FROM&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
   if(n===10&&s[0]==="Sat")return ["Sat","Rest","race tomorrow — feet up",null,"var(--ink4)"];
   return s;});}
 
 // Monday mobility: [section, exercise, dose, cue, minutes, eccentric (dropped in race week)]
 const MOB=[
- ["Breathe & loosen","Cat-cow","10 slow reps","Move one segment of the spine at a time. Gets the back moving before anything is held.",2],
- ["Breathe & loosen","Child's pose, breathing","1 min","Big slow breaths into your lower back and sides. Let the hips sink back.",1],
- ["Hips & glutes","90/90 hip switches","2 × 8 each way","Sit tall, rotate both knees side to side slowly. Hands behind you for support if needed.",3],
- ["Hips & glutes","Half-kneeling hip flexor stretch","2 × 45 s each side","Squeeze the back leg's glute and tuck the pelvis. Feel it at the front of the hip, not the low back.",3],
+ ["Breathe & loosen","Cat-cow into child's pose","10 slow reps, then 5 breaths","Move one segment of the spine at a time, then sit back into child's pose and breathe into your lower back.",2],
+ ["Roll it out","Foam roller: calves, quads, glutes","~4 min total","Slow passes, about 60 s per area. Pause on tender spots and breathe; it should ease, not hurt. Sit on the ball for the glutes if the roller isn't reaching.",4],
+ ["Hips & glutes","90/90 hip switches","2 × 8 each way","Sit tall on the mat, rotate both knees side to side slowly. Hands behind you for support if needed.",2],
+ ["Hips & glutes","Half-kneeling hip flexor stretch","2 × 45 s each side","Fold the mat under the back knee. Squeeze that glute and tuck the pelvis: you should feel the front of the hip, not the low back.",3],
  ["Hips & glutes","Pigeon pose (or figure-4 lying down)","90 s each side","Deep glute stretch. Use figure-4 on your back if pigeon pinches the knee.",3],
  ["Hips & glutes","Frog stretch","90 s","Inner thighs and groin. Rock gently forward and back; never force the depth.",2],
- ["Hamstrings & low back","Strap hamstring stretch, lying down","2 × 45 s each leg","Leg straight, lower back flat on the floor. A towel or belt works as the strap.",3],
+ ["Hamstrings & low back","Lying hamstring stretch","2 × 45 s each leg","On your back, hands behind the thigh, straighten the knee until you feel the stretch. Keep the lower back flat. No strap needed.",3],
  ["Hamstrings & low back","Supine twist","60 s each side","Knees drop to one side, both shoulders stay down. Easy on the low back.",2],
- ["Hamstrings & low back","Slider hamstring curl, slow lowering","2 × 6","Bridge up, heels on a towel. Take 4–5 s to slide the legs out. This is the hamstring-strain protection.",3,1],
- ["Calves, achilles & feet","Wall calf stretch, straight knee","60 s each leg","Back heel down, knee locked. Works the big calf muscle.",2],
+ ["Hamstrings & low back","Bridge walkouts, slow","2 × 5","Bridge up, then walk the heels out in small steps until the legs are nearly straight, and walk back. Hips stay up. This is the hamstring-strain protection.",3,1],
+ ["Calves, achilles & feet","Wall calf stretch, straight knee","60 s each leg","Hands on the wall, back heel down, knee locked. The big calf muscle.",2],
  ["Calves, achilles & feet","Wall calf stretch, bent knee","60 s each leg","Same position, back knee bent. Works the soleus, which runners usually neglect.",2],
- ["Calves, achilles & feet","Eccentric heel drops off a step","2 × 10 each leg","Up on two feet, lower on one over 3 s. One set knee straight, one set knee bent.",3,1],
+ ["Calves, achilles & feet","Slow calf lowers","2 × 10 each leg","Rise on both feet, lower on one over 3 s. Use a stair edge if you have one for extra range, otherwise flat floor.",3,1],
  ["Calves, achilles & feet","Tibialis raises against a wall","2 × 15","Back to the wall, heels down, lift the toes. Shins and ankles.",2],
- ["Calves, achilles & feet","Foot roll on a ball","60 s each foot","Tennis or lacrosse ball under the arch. Slow and firm, never painful.",2],
+ ["Calves, achilles & feet","Foot roll on a ball","60 s each foot","Ball under the arch. Slow and firm, never painful.",2],
  ["End-range strength","Deep squat hold","3 × 30 s","Hold a door frame if you need to. Heels down, chest up.",2],
- ["End-range strength","Copenhagen plank, short lever","2 × 15 s each side","Top knee on a bench, lift the hips. Protects against groin strains. Skip if the groin is sore.",2,1],
- ["Finish","Legs up the wall","2 min","Slow breathing. You're done when your breathing has settled.",2]];
+ ["End-range strength","Adductor ball squeeze","5 × 5 s","On your back, knees bent, ball between the knees. Squeeze hard for 5 s, relax. Strengthens the groin against strains.",2],
+ ["Finish","Legs up the wall","2 min","Slow breathing on the mat. You're done when your breathing has settled.",2]];
 function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(S.week===10&&x.m[5]);});}
 function mobHTML(){
-  if(S.week===1)return "";
+  if(S.week<MOB_FROM)return "";
   var items=mobItems(),done=items.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length,
       mins=items.reduce(function(a,x){return a+x.m[4];},0),open=S.mobOpen!==false,sec="";
   var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">Mon · Mobility</div>'+
-    '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div></div>'+
+    '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div><div class="accstart">kit: yoga mat · foam roller · ball · a wall</div></div>'+
     '<div class="rt" style="color:var(--green)">'+done+'<small>/'+items.length+'</small></div></div>'+
     '<div class="bar"><div style="width:'+Math.round(done/items.length*100)+'%"></div></div>'+
     '<div class="rnote">Stretch to about 4–5 out of 10, never into pain. Breathe out into each hold, no bouncing. If an area is freshly strained, skip it this week.'+
-    (S.week===10?' <b>Race week:</b> the slow-lowering work and Copenhagen plank are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
+    (S.week===10?' <b>Race week:</b> the bridge walkouts and slow calf lowers are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
     '<button class="copybtn" data-act="mobopen">'+(open?'Hide routine ▲':'Show routine ▼')+'</button>';
   if(open){h+='<div class="moblist">';items.forEach(function(x){var m=x.m,on=!!S.mob[K()+":mob:"+x.i];
       if(m[0]!==sec){sec=m[0];h+='<div class="lbl mobsec">'+esc(sec)+'</div>';}
@@ -274,7 +275,9 @@ const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","De
 let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},ref:false,block:null,view:"new",oweek:8};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
-S.mob=S.mob||{};if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
+S.mob=S.mob||{};
+Object.keys(S.mob).forEach(function(k){var w=parseInt(k.slice(BLOCK.length),10);if(k.indexOf(BLOCK)===0&&w<MOB_FROM)delete S.mob[k];});
+if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
 function dOnly(d){d.setHours(0,0,0,0);return d;}
@@ -427,7 +430,7 @@ function stats(){
     var wk=k.indexOf(BLOCK)===0?BLOCK+k.slice(BLOCK.length).split(":")[0]:k.split(":")[0];liftKeys[wk]=1;});});
   st.lifts=Object.keys(liftKeys).length;
   // a mobility session counts once 75% of that week's routine is ticked
-  st.mobility=WEEKS.filter(function(w){if(w.n===1)return false;var n=0,c=0;
+  st.mobility=WEEKS.filter(function(w){if(w.n<MOB_FROM)return false;var n=0,c=0;
     MOB.forEach(function(m,i){if(w.n===10&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
   // a week "counts" with 4+ sessions ticked; streak = consecutive counted weeks ending at the latest one
   var done=function(pre){return SCHED.filter(function(x){return !!S.sessions[pre+x[0]];}).length>=4;};
@@ -441,7 +444,7 @@ const BADGES=[
  ["Three-week streak","best",3],["Six-week streak","best",6],["Ten-week streak","best",10],
  ["50 km run","km",50],["100 km run","km",100],["200 km run","km",200],
  ["Long run 15 km+","longest",15],["Long run 19 km — peak","longest",19],["21.1 km — the half","longest",21.1],
- ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — 9 sessions","mobility",9],
+ ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — 8 sessions","mobility",8],
  ["10 tonnes lifted","kg",10000],["25 tonnes lifted","kg",25000],["50 tonnes lifted","kg",50000]];
 function fmtBig(v,k){return k==="kg"?(v>=1000?(Math.round(v/100)/10)+" t":Math.round(v)+" kg"):k==="km"||k==="longest"?(Math.round(v*10)/10)+" km":String(v);}
 function rewardHTML(){
@@ -537,9 +540,9 @@ function sessionText(){
   out+=runLine("long",(S.week===10?"Sun · RACE":"Sun · Long run"),w.long+" km");
   out+=runLine("quality","Tue · "+w.q.n+" ("+w.q.s+")","quality");
   out+=runLine("swim","Fri · Swim",(S.week===10?"15":"20–30")+" min easy","m");
-  if(S.week>1){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
+  if(S.week>=MOB_FROM){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
     out+="\n\nMOBILITY (Mon)\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
-  out+="\n\nBOXING"+(S.week===1?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week===1||S.week===10)?"":"\n  Sat · light and technical — long run tomorrow");
+  out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===10)?"":"\n  Sat · light and technical — long run tomorrow");
   out+="\n\nSTRENGTH (Thu)";
   MAINS.forEach(function(m){
     var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -729,7 +732,7 @@ function render(){
     '<h4>Strength is maintenance now</h4>'+
     '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. What actually preserves strength is <span class="a">intensity, not volume</span>, so squat and bench are built like a proper maintenance day: work up to <b>one clean top triple</b> at 77–85%, then a couple of crisp back-off fives. Brace hard, own the descent, never grind a rep. The conventional deadlift stays out — it costs more recovery than it returns while you are running — but the Romanian deadlift is now a real lift off your deadlift max, not an afterthought, because a strong posterior chain is your best protection against running injuries. Rows and pull-ups keep the back honest; the <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
     '<h4>Monday mobility</h4>'+
-    '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of slow-lowering work: slider hamstring curls, heel drops and the Copenhagen plank. That eccentric strength is what makes hamstrings, calves and groin harder to strain. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
+    '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of strength work: bridge walkouts, slow calf lowers and a ball squeeze for the groin. That strength is what makes hamstrings, calves and groin harder to strain. It starts in week 3 and only needs a mat, a foam roller, a ball and a wall. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
     '<h4>Boxing alongside the running</h4>'+
     '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Wednesday is the full session. Saturday stays light and technical — pads, footwork and drills, no hard conditioning rounds — because you run long the next morning. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: Tuesday and Sunday. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
