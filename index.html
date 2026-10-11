@@ -169,7 +169,7 @@
 <div class="wrap" id="app"></div>
 <script>
 const RACE={name:"BYD Singapore International Marathon",event:"Half Marathon · 21.1 km",date:"2026-12-06",meta:"F1 Pit Building → National Stadium · 3h45 cut-off"};
-const START="2026-09-28"; // Monday of week 1
+const START="2026-09-21"; // Monday of week 1
 const BLOCK="hm26";
 
 const WEEKS=[
@@ -189,10 +189,14 @@ const WEEKS=[
   q:{n:"Intervals",s:"5 × 3 min @ 10k effort",d:"Jog 2 min between. Sharp but short."},sets:2,easy:[5,6]},
  {n:8,phase:"Peak",pct:.75,long:19,lnote:"Peak long run. Full dress rehearsal — race kit, race breakfast, race fuelling.",
   q:{n:"Tempo",s:"2 × 15 min @ half pace",d:"3 min jog between. The key session of the whole block."},sets:2,easy:[6,7]},
- {n:9,phase:"Taper",pct:.70,long:14,lnote:"Taper starts. Volume drops, effort stays sharp. Resist adding anything.",
+ {n:9,phase:"Taper",pct:.70,long:16,lnote:"Taper starts. Volume drops, effort stays sharp. Resist adding anything.",
   q:{n:"Sharpener",s:"4 × 3 min @ 10k effort",d:"Jog 2 min. Should feel springy, not tiring."},sets:2,easy:[5,5]},
- {n:10,phase:"Race",pct:.60,long:21.1,lnote:"RACE DAY. Go out slower than feels right for the first 5 km — you'll thank yourself at 18.",
+ {n:10,phase:"Taper",pct:.70,long:13,lnote:"Second taper week. Keep the legs sharp, nothing new.",
+  q:{n:"Sharpener",s:"4 × 2 min @ 10k effort",d:"Jog 2 min between. Short, springy, done before you feel it."},sets:2,easy:[5,5]},
+ {n:11,phase:"Race",pct:.60,long:21.1,lnote:"RACE DAY. Go out slower than feels right for the first 5 km — you'll thank yourself at 18.",
   q:{n:"Primer",s:"3 × 2 min @ race pace",d:"Three days out from the race. Short and sharp, then rest up and eat well."},sets:1,easy:[4,4]}];
+
+const RACE_WEEK=WEEKS.length; // race week is always the last week
 
 const PHASE={Base:"#a3a3a3",Build:"var(--amber)",Cutback:"var(--green)",Peak:"var(--red)",Taper:"var(--green)",Race:"var(--red)"};
 
@@ -226,13 +230,29 @@ const ACC3=[
  ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
 function mainsFor(n){return n<NEW_FROM?MAINS:[MAINS[0],MAINS[1],OHP,MAINS[2]];}
 function accFor(n){return n<NEW_FROM?ACC:ACC3;}
-function liftDay(n){return n<NEW_FROM?"Thu":"Tue";}
-function qDay(n){return n<NEW_FROM?"Tue":"Thu";}
+// Per-week overrides (haze / PSI reschedules). Only the listed weeks change; log keys never change.
+// Week 3: Sun 11 Oct long run postponed (haze); week 3's mobility done that day instead.
+// Week 4: lift Mon, mobility + easy Tue, week 3's 15 km long run on Wed (3:long key), easy Thu, no quality run.
+const OVR={
+ 3:{sched:{Mon:["Mon","Mobility — moved to Sun (haze)","done Sun 11 Oct",null,"var(--ink4)"],
+    Sun:["Sun","Mobility (moved from Mon, haze)","long run moved to Wed 14 Oct","mob","var(--green)"]},
+    longDay:"Wed 14 Oct",longTitle:"Long run (moved to Wed 14 Oct, haze)",mobDay:"Sun",mobLabel:"Sun 11 Oct (moved from Mon, haze)",mobTick:[3,"Sun"]},
+ 4:{sched:{Mon:["Mon","Strength","gym, moved from Tue","lift","var(--amber)"],
+    Tue:["Tue","Mobility + easy / one boxing class","mobility moved from Mon, single class only","mob","var(--green)"],
+    Wed:["Wed","Long run (moved from Sun, haze)","only if PSI is OK","long","var(--green)"],
+    Thu:["Thu","Easy / one boxing class","no quality run this week",null,"var(--ink2)"]},
+    lift:"Mon",q:null,mobDay:"Tue",mobLabel:"Tue (moved from Mon)",mobTick:[4,"Tue"],extraLong:{from:3,day:"Wed"},
+    longNote:"Only if PSI is OK, else treadmill 60-75 min easy or a double boxing session with Fight Camp."}};
+function ovr(n){return OVR[n]||{};}
+function liftDay(n){var o=ovr(n);return o.lift||(n<NEW_FROM?"Thu":"Tue");}
+function qDay(n){var o=ovr(n);return ("q" in o)?o.q:(n<NEW_FROM?"Tue":"Thu");}
+function longDay(n){var o=ovr(n);if(o.longDay)return o.longDay;for(var k in OVR){var e=OVR[k].extraLong;if(e&&e.from===n)return e.day;}return "Sun";}
+function mobDay(n){return ovr(n).mobDay||"Mon";}
 function sprintNote(n){
   if(n<NEW_FROM)return "";
   if(n<=4)return " With your friend: sprints can replace this session — 6–8 × 80–100 m at 85–90%, walking back between each. Never flat-out, never cold.";
   if(n<=8)return " With your friend: do this session first, because it is the half-marathon work, then finish with 4–6 relaxed sprints at about 90%.";
-  if(n===9)return " Finish with a few relaxed sprints.";
+  if(n<RACE_WEEK)return " Finish with a few relaxed sprints.";
   return " No sprints this week.";}
 
 const SCHED=[
@@ -246,13 +266,14 @@ const SCHED=[
 
 // Mobility Mondays (and Saturday boxing) start in week 3; race week rests on Saturday.
 const MOB_FROM=3;
-function schedFor(n){return SCHED.map(function(s){
+function schedFor(n){var o=ovr(n);return SCHED.map(function(s){
+  if(o.sched&&o.sched[s[0]])return o.sched[s[0]];
   if(n<MOB_FROM&&s[0]==="Mon")return ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)"];
   if(n<MOB_FROM&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
   if(n<NEW_FROM&&s[0]==="Tue")return ["Tue","Quality run","the hard one","quality","var(--sky)"];
   if(n<NEW_FROM&&s[0]==="Thu")return ["Thu","Strength","one full-body session","lift","var(--amber)"];
   if(n>=6&&n<=8&&s[0]==="Sat")return ["Sat","Boxing — very light","skip it if Thursday left you flat",null,"var(--ink2)"];
-  if(n===10&&s[0]==="Sat")return ["Sat","Rest","race tomorrow — feet up",null,"var(--ink4)"];
+  if(n===RACE_WEEK&&s[0]==="Sat")return ["Sat","Rest","race tomorrow — feet up",null,"var(--ink4)"];
   return s;});}
 
 // Monday mobility: [section, exercise, dose, cue, minutes, eccentric (dropped in race week)]
@@ -274,17 +295,17 @@ const MOB=[
  ["End-range strength","Deep squat hold","3 × 30 s","Hold a door frame if you need to. Heels down, chest up.",2],
  ["End-range strength","Adductor squeeze, foam roller","5 × 5 s","On your back, knees bent, foam roller across between the knees. Squeeze hard for 5 s, relax. No roller to hand? Stack both fists between the knees. Strengthens the groin against strains.",2],
  ["Finish","Legs up the wall","2 min","Slow breathing on the mat. You're done when your breathing has settled.",2]];
-function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(S.week===10&&x.m[5]);});}
+function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(S.week===RACE_WEEK&&x.m[5]);});}
 function mobHTML(){
   if(S.week<MOB_FROM)return "";
   var items=mobItems(),done=items.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length,
       mins=items.reduce(function(a,x){return a+x.m[4];},0),open=S.mobOpen!==false,sec="";
-  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">Mon · Mobility</div>'+
+  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">'+(ovr(S.week).mobLabel||"Mon")+' · Mobility</div>'+
     '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div><div class="accstart">kit: yoga mat · foam roller · ball · a wall</div></div>'+
     '<div class="rt" style="color:var(--green)">'+done+'<small>/'+items.length+'</small></div></div>'+
     '<div class="bar"><div style="width:'+Math.round(done/items.length*100)+'%"></div></div>'+
     '<div class="rnote">Stretch to about 4–5 out of 10, never into pain. Breathe out into each hold, no bouncing. If an area is freshly strained, skip it this week.'+
-    (S.week===10?' <b>Race week:</b> the bridge walkouts and slow calf lowers are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
+    (S.week===RACE_WEEK?' <b>Race week:</b> the bridge walkouts and slow calf lowers are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
     '<button class="copybtn" data-act="mobopen">'+(open?'Hide routine ▲':'Show routine ▼')+'</button>';
   if(open){h+='<div class="moblist">';items.forEach(function(x){var m=x.m,on=!!S.mob[K()+":mob:"+x.i];
       if(m[0]!==sec){sec=m[0];h+='<div class="lbl mobsec">'+esc(sec)+'</div>';}
@@ -456,7 +477,7 @@ function stats(){
   st.lifts=Object.keys(liftKeys).length;
   // a mobility session counts once 75% of that week's routine is ticked
   st.mobility=WEEKS.filter(function(w){if(w.n<MOB_FROM)return false;var n=0,c=0;
-    MOB.forEach(function(m,i){if(w.n===10&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
+    MOB.forEach(function(m,i){if(w.n===RACE_WEEK&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
   // a week "counts" with 4+ sessions ticked; streak = consecutive counted weeks ending at the latest one
   var done=function(pre){return SCHED.filter(function(x){return !!S.sessions[pre+x[0]];}).length>=4;};
   var seq=OLD_WEEKS.map(function(w){return done(w.n+":");}).concat(WEEKS.map(function(w){return done(BLOCK+w.n+":");}));
@@ -469,7 +490,7 @@ const BADGES=[
  ["Three-week streak","best",3],["Six-week streak","best",6],["Ten-week streak","best",10],
  ["50 km run","km",50],["100 km run","km",100],["200 km run","km",200],
  ["Long run 15 km+","longest",15],["Long run 19 km — peak","longest",19],["21.1 km — the half","longest",21.1],
- ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — 8 sessions","mobility",8],
+ ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — "+(RACE_WEEK-MOB_FROM+1)+" sessions","mobility",RACE_WEEK-MOB_FROM+1],
  ["10 tonnes lifted","kg",10000],["25 tonnes lifted","kg",25000],["50 tonnes lifted","kg",50000]];
 function fmtBig(v,k){return k==="kg"?(v>=1000?(Math.round(v/100)/10)+" t":Math.round(v)+" kg"):k==="km"||k==="longest"?(Math.round(v*10)/10)+" km":String(v);}
 function rewardHTML(){
@@ -498,7 +519,7 @@ function stripHTML(){
   var cur=WEEKS.map(function(wk){var a=S.view==="new"&&wk.n===S.week;
     return '<button class="wk '+(a?'active':'')+' '+(wk.n===currentWeek()?'now':'')+'" data-week="'+wk.n+'"><span>'+wk.n+'</span>'+
       '<span class="dot" style="background:'+(a?'#0a0a0a':PHASE[wk.phase])+'"></span></button>';}).join("");
-  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 28 Sep">»</div>'+cur+'</div>';}
+  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 21 Sep">»</div>'+cur+'</div>';}
 function schedHTML(rows,pre,isNow,td,raceSun){
   return '<div class="sched">'+rows.map(function(s){
     var d=s[0],done=!!S.sessions[pre+d],label=s[1],sub=s[2];
@@ -537,7 +558,7 @@ function renderOld(){
   '<div class="eyebrow" style="color:var(--amber)">Previous block · Strength System</div>'+
   '<h1>The Block</h1>'+
   '<p class="lead">Twelve-week strength block. You completed week 8, then the program changed.</p>'+
-  '<div class="obanner"><b>You are looking back.</b> These are the weeks before the half-marathon block started on 28 Sep. Everything here is still yours to edit. Targets recalculate from whatever maxes are entered above — your logged sets are what you actually lifted. Tap » in the strip to return to the current program.</div>'+
+  '<div class="obanner"><b>You are looking back.</b> These are the weeks before the half-marathon block started on 21 Sep. Everything here is still yours to edit. Targets recalculate from whatever maxes are entered above — your logged sets are what you actually lifted. Tap » in the strip to return to the current program.</div>'+
   rewardHTML()+
   maxesHTML("Set these to what they were at the time if you want the old targets to read as they did.")+
   stripHTML()+
@@ -552,22 +573,24 @@ function renderOld(){
   scrollStrip();}
 
 // ---------- session + full log text ----------
-function runLine(slot,label,target,unit){
-  var lg=S.runs[S.week+":"+slot]||{},bits=[];
+function runLine(slot,label,target,unit,wk){
+  var lg=S.runs[(wk||S.week)+":"+slot]||{},bits=[];
   if(lg.km)bits.push(lg.km+" "+(unit||"km"));if(lg.t)bits.push(lg.t);
   return "\n  "+label+" — target "+target+(bits.length?" · logged "+bits.join(" / "):"");
 }
 function sessionText(){
   var w=WEEKS[S.week-1];
-  var out="Week "+S.week+" of 10 · "+w.phase+" · "+weekRange(S.week);
+  var out="Week "+S.week+" of "+WEEKS.length+" · "+w.phase+" · "+weekRange(S.week);
   out+="\n"+daysToRace()+" days to "+RACE.event;
   out+="\n\nRUNS";
-  out+=runLine("long",(S.week===10?"Sun · RACE":"Sun · Long run"),w.long+" km");
-  out+=runLine("quality",qDay(S.week)+" · "+w.q.n+" ("+w.q.s+")","quality");
-  out+=runLine("swim","Fri · Swim",(S.week===10?"15":"20–30")+" min easy","m");
+  var xl=ovr(S.week).extraLong;if(xl)out+=runLine("long",xl.day+" · Long run (moved from week "+xl.from+" Sun, haze; only if PSI is OK)",WEEKS[xl.from-1].long+" km",null,xl.from);
+  out+=runLine("long",(S.week===RACE_WEEK?"Sun · RACE":longDay(S.week)+" · Long run"),w.long+" km");
+  if(qDay(S.week))out+=runLine("quality",qDay(S.week)+" · "+w.q.n+" ("+w.q.s+")","quality");else out+="\n  No quality run this week";
+  out+=runLine("swim","Fri · Swim",(S.week===RACE_WEEK?"15":"20–30")+" min easy","m");
   if(S.week>=MOB_FROM){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
-    out+="\n\nMOBILITY (Mon)\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
-  out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===10)?"":"\n  Sat · light and technical — long run tomorrow");
+    out+="\n\nMOBILITY ("+mobDay(S.week)+")\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
+  if(ovr(S.week).sched)out+="\n\nTHIS WEEK (rescheduled for haze)"+schedFor(S.week).map(function(s){return "\n  "+s[0]+" · "+s[1]+(s[2]?" — "+s[2]:"");}).join("");
+  else out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===RACE_WEEK)?"":"\n  Sat · light and technical — long run tomorrow");
   out+="\n\nSTRENGTH ("+liftDay(S.week)+")";
   mainsFor(S.week).forEach(function(m){
     var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -612,7 +635,7 @@ function buildCSV(){
   var rows=[["Category","Week","Day","Item","Set","Weight","Reps","Distance","Time","Done","Key"]];
   RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
   for(var wk=1;wk<=WEEKS.length;wk++){
-    [["long","Long run","Sun"],["quality","Quality",qDay(wk)],["easy","Easy run",""],["swim","Swim","Fri"]].forEach(function(s){
+    [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim","Fri"]].forEach(function(s){
       var key=wk+":"+s[0],lg=S.runs[key]||{};
       if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push([s[0]==="swim"?"Swim":"Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
     mainsFor(wk).forEach(function(m){
@@ -624,7 +647,7 @@ function buildCSV(){
   }
   Object.keys(S.sessions).forEach(function(key){if(S.sessions[key])rows.push(["Session","","","","","","","","","yes",key]);});
   Object.keys(S.mob).forEach(function(key){if(!S.mob[key])return;var p=key.slice(BLOCK.length).split(":"),it=MOB[+p[2]];
-    rows.push(["Mobility",p[0],"Mon",it?it[1]:"","","","","","","yes",key]);});
+    rows.push(["Mobility",p[0],mobDay(+p[0]),it?it[1]:"","","","","","","yes",key]);});
   // Anything logged in an earlier block stays exportable.
   Object.keys(S.logs).forEach(function(key){
     if(key.indexOf(BLOCK)===0)return;
@@ -674,8 +697,8 @@ function importCSV(text){
 }
 
 // ---------- views ----------
-function runHTML(slot,day,title,target,unit,spec,note,cls,dl){
-  dl=dl||"km";var key=S.week+":"+slot,lg=S.runs[key]||{};
+function runHTML(slot,day,title,target,unit,spec,note,cls,dl,wk){
+  dl=dl||"km";var key=(wk||S.week)+":"+slot,lg=S.runs[key]||{};
   return '<div class="run '+(cls||'')+'">'+
     '<div class="rtop"><div><div class="rname">'+day+' · '+esc(title)+'</div>'+
     (spec?'<div class="rspec">'+esc(spec)+'</div>':'')+'</div>'+
@@ -726,7 +749,7 @@ function render(){
   document.getElementById("app").innerHTML=
   '<div class="eyebrow">Half Marathon Block</div>'+
   '<h1>The Half</h1>'+
-  '<p class="lead">Ten weeks. One gym day. The long run is the block.</p>'+
+  '<p class="lead">Eleven weeks. One gym day. The long run is the block.</p>'+
 
   '<div class="count"><div><div class="cdays">'+(d2r>0?d2r:0)+'</div><div class="clbl">'+(d2r>0?"days to go":d2r===0?"race day":"done")+'</div></div>'+
   '<div class="cright"><div class="crace">Sun 6 Dec · '+RACE.event+'</div><div class="cmeta">'+RACE.name+'</div><div class="cmeta">'+RACE.meta+'</div></div></div>'+
@@ -741,11 +764,12 @@ function render(){
   '<div class="dates">'+weekRange(S.week)+(isNow?' · this week':'')+'</div></div>'+
   '<span class="hint">tap ✓ when done</span></div>'+
 
-  schedHTML(schedFor(S.week).map(function(s){return [s[0],s[1],s[2],null,null,s[4]];}),K()+":",isNow,td,S.week===10)+
+  schedHTML(schedFor(S.week).map(function(s){return [s[0],s[1],s[2],null,null,s[4]];}),K()+":",isNow,td,S.week===RACE_WEEK)+
 
-  runHTML("long","Sun",(S.week===10?"RACE — BYD Half":"Long run"),w.long,"km","easy, conversational",w.lnote,(S.week===10?"race":"key"))+
-  runHTML("quality",qDay(S.week),w.q.n,w.q.s,"session","the one hard run",w.q.d+sprintNote(S.week),"key")+
-  runHTML("swim","Fri","Swim",(S.week===10?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
+  (ovr(S.week).extraLong?(function(e){var pw=WEEKS[e.from-1];return runHTML("long",e.day,"Long run (moved from Sun, haze)",pw.long,"km","week "+e.from+"'s long run, easy",ovr(S.week).longNote,"key",null,e.from);})(ovr(S.week).extraLong):"")+
+  runHTML("long",(ovr(S.week).longDay?"Wed":"Sun"),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",w.lnote,(S.week===RACE_WEEK?"race":"key"))+
+  ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session","the one hard run",w.q.d+sprintNote(S.week),"key"):"")+
+  runHTML("swim","Fri","Swim",(S.week===RACE_WEEK?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
 
   mobHTML()+
   liftHTML()+
@@ -766,7 +790,7 @@ function render(){
     '<h4>Boxing alongside the running</h4>'+
     '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Wednesday is the full session. Saturday stays light and technical — pads, footwork and drills, no hard conditioning rounds — because you run long the next morning. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: the quality run and the long run. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
-    '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
+    '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–11</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
     '<p>Week 8 is your dress rehearsal — race kit, race breakfast, race fuelling, nothing new. On the day, run the first 5 km slower than feels right. A half is won in the last 5 km, and the cut-off is 3h45, so there is no need to panic early.</p>'+
     '<h4>If something hurts</h4>'+
@@ -815,7 +839,7 @@ app.addEventListener("click",function(e){
   else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;if(S.sessions[k])delete S.sessions[k];else S.sessions[k]=true;persist();render();}
   else if(b.dataset.mob){var mk=K()+":mob:"+b.dataset.mob;
     if(S.mob[mk])delete S.mob[mk];
-    else{S.mob[mk]=true;if(mobItems().every(function(x){return S.mob[K()+":mob:"+x.i];}))S.sessions[K()+":Mon"]=true;} // finishing the routine ticks Monday
+    else{S.mob[mk]=true;if(mobItems().every(function(x){return S.mob[K()+":mob:"+x.i];})){var mt=ovr(S.week).mobTick;S.sessions[mt?BLOCK+mt[0]+":"+mt[1]:K()+":Mon"]=true;}} // finishing the routine ticks Monday
     persist();render();}
   else if(b.dataset.act==="mobopen"){S.mobOpen=!(S.mobOpen!==false);persist();render();}
   else if(b.dataset.act==="copyweek"){copyText(S.view==="old"?oldSessionText():sessionText(),b);}
