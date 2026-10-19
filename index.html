@@ -136,6 +136,14 @@
   .run.race .rt{color:var(--red)}
   .runit{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink4);text-align:right;margin-top:2px}
   .rnote{font-size:12px;color:var(--ink2);margin-top:8px}
+  .howbtn{display:block;margin-top:10px;background:none;border:none;color:var(--sky);font-size:12px;padding:0;cursor:pointer;font-family:var(--sans)}
+  .howbody{margin-top:8px;font-size:12px;color:var(--ink2);line-height:1.5;border-left:2px solid var(--line);padding-left:10px}
+  .howbody ol{margin:0 0 8px;padding-left:18px}
+  .howbody li{margin:3px 0}
+  .howbody p{margin:6px 0}
+  .howbody b{color:var(--ink);font-weight:600}
+  .howt{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+  .effort{font-size:11px;color:var(--ink3)}
   .day{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;margin-top:16px}
   .dhead{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
   .main{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
@@ -213,6 +221,80 @@ const WEEKS=[
   q:{n:"Primer",s:"3 × 2 min @ race pace",d:"Three days out from the race. Short and sharp, then rest up and eat well."},sets:1,easy:[4,4]}];
 
 const RACE_WEEK=WEEKS.length; // race week is always the last week
+
+// "How to do it" for each session: numbered steps, how it should feel, why, total time.
+const EFFORT="Easy: you can talk in full sentences. Half-marathon pace: comfortably hard, a short sentence at most. 10k effort: hard but controlled, a few words at a time. 5k effort: hard, a word or two.";
+const WU="Warm up with 10–15 min easy, then 3–4 strides (20 s quick and relaxed).",CD="Cool down with 10 min easy.";
+const QHOW={
+ 1:{sum:"Easy running with 6 one-minute surges — your first speed work back.",
+    steps:["Run 10 min easy to warm up.","Do 6 surges: 1 min at 5k effort, then 90 s easy jogging. Keep moving the whole time — the jog is your recovery.","Finish with 10 min easy."],
+    feel:"Surges are hard but smooth, never a sprint. You should finish feeling you could have done a couple more.",
+    why:"Reminds your legs how to run faster after the time off. Each surge is short, so the risk is low.",total:"about 35 min"},
+ 2:{sum:"Easy running with 8 one-minute surges.",
+    steps:["Run 10 min easy to warm up.","Do 8 surges: 1 min at 5k effort, then 90 s easy jogging. Keep moving the whole time.","Finish with 10 min easy."],
+    feel:"Same effort as last week, two more reps. Finish feeling you could have done two more.",
+    why:"Builds on week 1 with a bit more fast running before the harder sessions start.",total:"about 40 min"},
+ 3:{sum:"5 × 3 min at 10k effort, with 2 min jogs between.",
+    steps:[WU,"Run 5 × 3 min at 10k effort, jogging easy for 2 min between each.",CD],
+    feel:"Hard but controlled — a few words at a time. Your last rep should be about as fast as your first; if you're fading badly, you started too quick.",
+    why:"Raises your aerobic ceiling, so half-marathon pace starts to feel easier.",total:"about 50 min"},
+ 4:{sum:"Easy 5 km, then 6 short strides.",
+    steps:["Run 5 km easy — conversational, about 30–35 min. This is also your warm-up.","Do 6 strides of 20 s: build up over 5 s, hold fast-but-relaxed for 10 s, ease off over 5 s.","Walk back to the start between each one, 60–90 s, until your breathing settles.","Optional: a few minutes of easy jogging to finish."],
+    feel:"Strides are about 85–90% — quick, light and smooth, never flat-out. Stand tall, short quick steps, loose shoulders. You should finish springy, not tired.",
+    why:"Cutback week: keeps your legs used to moving quickly without adding fatigue, so you absorb the training before the next build.",total:"about 40–45 min"},
+ 5:{sum:"3 × 8 min at half-marathon pace, with 90 s jogs.",
+    steps:[WU,"Run 3 × 8 min at half-marathon pace, jogging easy for 90 s between each.",CD],
+    feel:"Comfortably hard — you could say a short sentence but wouldn't want to chat. All three reps should feel the same.",
+    why:"This is your goal race effort. Practising it teaches you what race pace feels like, so you don't go off too fast on the day.",total:"about 55 min"},
+ 6:{sum:"4 × 8 min at half-marathon pace, with 90 s jogs.",
+    steps:[WU,"Run 4 × 8 min at half-marathon pace, jogging easy for 90 s between each.",CD],
+    feel:"Comfortably hard, never desperate. You should hold the same pace on all four.",
+    why:"More time at race pace — the backbone of half-marathon fitness.",total:"about 65 min"},
+ 7:{sum:"5 × 3 min at 10k effort, with 2 min jogs.",
+    steps:[WU,"Run 5 × 3 min at 10k effort, jogging easy for 2 min between each.",CD],
+    feel:"Hard but controlled. It's a cutback week, so don't add reps even if you feel great.",
+    why:"Keeps you sharp while your body recovers before the peak week.",total:"about 50 min"},
+ 8:{sum:"2 × 15 min at half-marathon pace — the key session of the block.",
+    steps:["Warm up with 15 min easy, then 3–4 strides.","Run 15 min at half-marathon pace, jog easy for 3 min, then another 15 min at the same pace.",CD],
+    feel:"Settle into a rhythm early. The second 15 min should be the same pace as the first — that's the test.",
+    why:"Thirty minutes at race pace shows you're ready and builds the confidence to hold it on the day.",total:"about 60 min"},
+ 9:{sum:"4 × 3 min at 10k effort — short and sharp for the taper.",
+    steps:[WU,"Run 4 × 3 min at 10k effort, jogging easy for 2 min between each.",CD],
+    feel:"Springy, not tiring. Stop at four even if you feel great — the taper only works if you let it.",
+    why:"Running volume drops in the taper, but a little faster running keeps your legs sharp for race day.",total:"about 45 min"},
+ 10:{sum:"3 × 2 min at race pace, three days before the race.",
+    steps:["Run 10 min easy.","Run 3 × 2 min at half-marathon pace, jogging easy for 2 min between each.","Finish with 5–10 min easy."],
+    feel:"Race pace should feel smooth and controlled today — that's the taper working.",
+    why:"Reminds your legs of race pace without any fatigue. Then rest up, eat well and sleep.",total:"about 30 min"}};
+const LONG_HOW={steps:["Run the whole distance at an easy, conversational pace — you should be able to talk in full sentences. It will feel slower than you think it should.","Take the first 2–3 km extra easy and let your body warm into it.","Drink every 20–30 min — it's hot in Singapore. From 14 km up, also take a gel or sports drink every 40–45 min, using what you'll use on race day.","Go by feel, not pace. A short walk at a water stop is fine."],
+  feel:"Comfortable the whole way. The last few km should feel tired but controlled, not a struggle.",
+  why:"Builds the endurance to keep going for two hours — the most important run of your week."};
+const LONG_IN_HOW={steps:["Set a 1% incline so it feels more like running outside.","Run the same distance at the same easy, conversational effort.","Keep water within reach and drink every 20 min — indoors still gets hot.","If it gets mentally long, break it up: a few minutes on the bike, then back on."],
+  feel:"Same as outside: comfortable the whole way.",why:LONG_HOW.why};
+const RACE_HOW={steps:["Eat the breakfast you practised, 2–3 hours before the start.","Warm up with 5–10 min of easy jogging and a few strides.","Run the first 5 km slower than feels right — the crowd and adrenaline will pull you faster.","From 5 to 15 km, settle into half-marathon pace and stay patient.","From 15 km, if you have something left, start to push. If not, hold steady — finishing strong beats finishing fast.","Drink at the water stations and take a gel around 45 and 90 min."],
+  feel:"Controlled early, hard late. The cut-off is 3h45, so there's no need to panic at any point.",
+  why:"Ten weeks of work, one morning. Run the race you trained for."};
+const SWIM_HOW={steps:["Swim easy and continuously, any stroke.","Need a breather? Rest for a few breaths at the wall, then carry on.","No intervals or sprint lengths — keep it relaxed."],
+  feel:"Easy enough to keep going the whole time.",why:"Loosens your legs and adds easy aerobic work with zero impact, two days before the long run."};
+const CARDIO_HOW={steps:["Choose a bike, elliptical or rower.","Keep it easy — you should be able to talk.","Keep the resistance light; this isn't a workout."],
+  feel:"Easy and steady.",why:SWIM_HOW.why};
+const LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big 3 (curl-up, side plank, bird dog).","For each main lift, do the ramp sets shown before your working sets.","Squat and bench: work up to one top set of 3 — it should feel like you had two more reps in you. Then do the lighter back-off sets of 5.","Rest 2–3 min between sets of the main lifts, and 60–90 s between accessory sets.","Never go to failure: end every set with 1–2 good reps left.","Log each set as you go."],
+  feel:"Strong and crisp, not exhausting. You should leave feeling you could do more.",
+  why:"One session a week holds your strength through the race build. The heavy top set keeps the strength; the low volume keeps your legs fresh for running. Your upper body can keep building — when a top set or every set of 6 feels easy, raise that max.",
+  total:"about 60–70 min"};
+function qHow(n,indoor){var h=QHOW[n];if(!indoor)return h;
+  return {sum:h.sum,feel:h.feel,why:h.why,total:h.total,
+    steps:["On the treadmill: set a 1% incline"+(n===4?".":" and change the speed at the start of each faster section.")].concat(h.steps.filter(function(x){return !/^Walk back/.test(x);}).map(function(x){
+      return /^Do 6 strides/.test(x)?"Skip the strides — treadmill belts don't speed up and slow down quickly enough.":x.replace(", then 3–4 strides (20 s quick and relaxed).",".").replace(", then 3–4 strides.",".");}))};}
+function howHTML(id,h,extra){var open=!!S.how[id];
+  return '<button class="howbtn" data-how="'+id+'">'+(open?'How to do it ▲':'How to do it ▼')+'</button>'+
+    (open?'<div class="howbody"><ol>'+h.steps.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol>'+
+      (h.feel?'<p><b>How it should feel:</b> '+esc(h.feel)+'</p>':'')+
+      (h.why?'<p><b>Why:</b> '+esc(h.why)+'</p>':'')+(extra||'')+
+      (h.total?'<p class="howt">Total: '+esc(h.total)+'</p>':'')+'</div>':'');}
+function qExtra(n,indoor){var f=indoor?"":sprintNote(n).trim();
+  return (f?'<p><b>'+(/^With your friend:/.test(f)?'With your friend:</b> '+esc(f.replace(/^With your friend:\s*/,"")):'Sprints:</b> '+esc(f))+'</p>':'')+
+    '<p class="effort"><b>Effort guide.</b> '+esc(EFFORT)+'</p>';}
 
 const PHASE={Base:"#a3a3a3",Build:"var(--amber)",Cutback:"var(--green)",Peak:"var(--red)",Taper:"var(--green)",Race:"var(--red)"};
 
@@ -359,10 +441,10 @@ function mobHTML(){
 const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},fri:{},indoor:{},ref:false,block:null,view:"new",oweek:8};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},fri:{},indoor:{},how:{},ref:false,block:null,view:"new",oweek:8};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
-S.mob=S.mob||{};S.moves=S.moves||{};S.fri=S.fri||{};S.indoor=S.indoor||{};
+S.mob=S.mob||{};S.moves=S.moves||{};S.fri=S.fri||{};S.indoor=S.indoor||{};S.how=S.how||{};
 if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
@@ -652,7 +734,8 @@ function sessionText(){
   out+="\n\nRUNS";
   var xl=ovr(S.week).extraLong;if(xl)out+=runLine("long",xl.day+" · Long run (moved from week "+xl.from+" Sun, haze; only if PSI is OK)",WEEKS[xl.from-1].long+" km",null,xl.from);
   out+=runLine("long",(S.week===RACE_WEEK?"Sun · RACE":longDay(S.week)+" · Long run"+(isIndoor(S.week,"long")?" (treadmill)":"")),w.long+" km");
-  if(qDay(S.week))out+=runLine("quality",qDay(S.week)+" · "+w.q.n+(isIndoor(S.week,"quality")?" on the treadmill":"")+" ("+w.q.s+")","quality");else out+="\n  No quality run this week";
+  if(qDay(S.week)){out+=runLine("quality",qDay(S.week)+" · "+w.q.n+(isIndoor(S.week,"quality")?" on the treadmill":"")+" ("+w.q.s+")","quality");
+    qHow(S.week,isIndoor(S.week,"quality")).steps.forEach(function(x,i){out+="\n    "+(i+1)+". "+x;});}else out+="\n  No quality run this week";
   if(friChoice(S.week)==="cf"){var c=S.runs[S.week+":cf"]||{},cb=[c.min?c.min+" min":"",c.note||""].filter(Boolean);
     out+="\n  "+dispDay(S.week,"Fri")+" · CrossFit class"+(cb.length?" · logged "+cb.join(" / "):"");}
   else if(isIndoor(S.week,"swim"))out+=runLine("cardio",dispDay(S.week,"Fri")+" · Indoor cardio",(S.week===RACE_WEEK?"15":"25–30")+" min easy");
@@ -790,8 +873,8 @@ function cfHTML(){
     '<span class="setn">WOD</span><input inputmode="text" placeholder="what you did" style="width:auto;flex:1;text-align:left;padding-left:8px" data-run="'+key+'" data-f="note" value="'+(lg.note!=null?esc(lg.note):'')+'"></div></div>';}
 function friHTML(){
   var c=friChoice(S.week),day=dispDay(S.week,"Fri"),swimCard=isIndoor(S.week,"swim")
-    ?runHTML("cardio",day,"Indoor cardio",(S.week===RACE_WEEK?"15":"25–30"),"min easy","bike, elliptical or rower","Easy and steady — same job as the swim: loosen the legs without any impact.","inside",null,null,indoorBtn("swim"))
-    :runHTML("swim",day,"Swim",(S.week===RACE_WEEK?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m",null,indoorBtn("swim"));
+    ?runHTML("cardio",day,"Indoor cardio",(S.week===RACE_WEEK?"15":"25–30"),"min easy","bike, elliptical or rower","Easy cardio instead of the swim — same job, loosening the legs with no impact.","inside",null,null,indoorBtn("swim"),howHTML("cardio",CARDIO_HOW))
+    :runHTML("swim",day,"Swim",(S.week===RACE_WEEK?"15":"20–30"),"min easy","zero impact, active recovery","Easy, continuous swimming to loosen your legs before Sunday. Log metres if you count them.","","m",null,indoorBtn("swim"),howHTML("swim",SWIM_HOW));
   var sel='<div class="frisel"><span class="hint">'+day+' · your choice</span>'+
       '<button class="arrbtn'+(c==="swim"?' on':'')+'" data-fri="swim">Swim</button>'+
       '<button class="arrbtn'+(c==="cf"?' on':'')+'" data-fri="cf">CrossFit</button></div>';
@@ -803,13 +886,13 @@ function friHTML(){
   var sw=S.runs[S.week+":"+(isIndoor(S.week,"swim")?"cardio":"swim")]||{},cf=S.runs[S.week+":cf"]||{};
   // the main card is the choice; the other only shows if something is already logged in it
   return sel+(c==="cf"?cfHTML()+((sw.km||sw.t)?swimCard:""):swimCard+((cf.min||cf.note)?cfHTML():""));}
-function runHTML(slot,day,title,target,unit,spec,note,cls,dl,wk,extra){
+function runHTML(slot,day,title,target,unit,spec,note,cls,dl,wk,extra,how){
   dl=dl||"km";var key=(wk||S.week)+":"+slot,lg=S.runs[key]||{};
   return '<div class="run '+(cls||'')+'">'+
     '<div class="rtop"><div><div class="rname">'+day+' · '+esc(title)+'</div>'+
     (spec?'<div class="rspec">'+esc(spec)+'</div>':'')+'</div>'+
     '<div><div class="rt">'+target+'</div><div class="runit">'+unit+'</div></div></div>'+
-    (note?'<div class="rnote">'+esc(note)+'</div>':'')+
+    (note?'<div class="rnote">'+esc(note)+'</div>':'')+(how||'')+
     '<div class="logrow"><span class="setn">'+dl+'</span>'+
     '<input inputmode="decimal" placeholder="'+dl+'" data-run="'+key+'" data-f="km" value="'+(lg.km!=null?esc(lg.km):'')+'">'+
     '<span class="setn">time</span>'+
@@ -841,6 +924,7 @@ function liftHTML(){
     '<div class="warm"><div class="warmh">Warm-up first</div>'+
     '<div class="warmi"><b>1.</b> 5 min easy bike or row, then McGill Big 3</div>'+
     '<div class="warmi"><b>2.</b> Ramp each lift to its working weight</div></div>'+
+    howHTML("lift",LIFT_HOW)+
     mainsFor(S.week).map(function(m){return mainHTML(m,trav);}).join("")+
     '<div class="acc"><div class="lbl">Accessories</div>'+
     '<div class="accnote">'+(S.week<NEW_FROM?'Maintenance, not progression. RPE 7–8, never to failure — the runs are the priority now.':
@@ -883,11 +967,11 @@ function render(){
 
   (ovr(S.week).extraLong?(function(e){var pw=WEEKS[e.from-1];return runHTML("long",dispDay(S.week,e.day),"Long run (moved from Sun, haze)",pw.long,"km","week "+e.from+"'s long run, easy",ovr(S.week).longNote,"key",null,e.from);})(ovr(S.week).extraLong):"")+
   (isIndoor(S.week,"long")
-    ?runHTML("long",dispDay(S.week,"Sun"),"Long run · treadmill",w.long,"km","indoors, haze","Same distance, same easy effort. Set a 1% incline so it feels like the road. If it gets long mentally, break it up with a few minutes on the bike.","key inside",null,null,indoorBtn("long"))
-    :runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",w.lnote,(S.week===RACE_WEEK?"race":"key"),null,null,S.week===RACE_WEEK?"":indoorBtn("long")))+
+    ?runHTML("long",dispDay(S.week,"Sun"),"Long run · treadmill",w.long,"km","indoors, haze","Treadmill, same distance, same easy effort. This week: "+w.lnote,"key inside",null,null,indoorBtn("long"),howHTML("long",LONG_IN_HOW))
+    :runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",(S.week===RACE_WEEK?w.lnote:"This week: "+w.lnote),(S.week===RACE_WEEK?"race":"key"),null,null,S.week===RACE_WEEK?"":indoorBtn("long"),howHTML(S.week===RACE_WEEK?"race":"long",S.week===RACE_WEEK?RACE_HOW:LONG_HOW)))+
   ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?(isIndoor(S.week,"quality")
-      ?runHTML("quality",qDay(S.week)||"—",w.q.n+" · treadmill",w.q.s,"session","indoors, haze",w.q.d+" On the treadmill: set the speed for each rep, 1% incline. No sprints on the treadmill — save them for a clear day.","key inside",null,null,indoorBtn("quality"))
-      :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session","the one hard run",w.q.d+sprintNote(S.week),"key",null,null,indoorBtn("quality"))):"")+
+      ?runHTML("quality",qDay(S.week)||"—",w.q.n+" · treadmill",w.q.s,"session","indoors, haze",QHOW[S.week].sum+" On the treadmill.","key inside",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,true),qExtra(S.week,true)))
+      :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session",(S.week===4?"cutback week, light speed work":S.week===RACE_WEEK?"race week tune-up":"the one hard run"),QHOW[S.week].sum,"key",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,false),qExtra(S.week,false)))):"")+
   friHTML()+
 
   mobHTML()+
@@ -959,6 +1043,7 @@ app.addEventListener("click",function(e){
     moveWeek(from,to);}
   else if(b.dataset.act==="shift-ok"){delete S.shiftNote;persist();render();}
   else if(b.dataset.act==="shift-undo"){if(confirm("Put your logs back where they were (one week ahead)?")){if(!undoShift())alert("No backup found.");render();}}
+  else if(b.dataset.how){var hid=b.dataset.how;if(S.how[hid])delete S.how[hid];else S.how[hid]=true;persist();render();}
   else if(b.dataset.indoor){var ik=S.week+":"+b.dataset.indoor;if(S.indoor[ik])delete S.indoor[ik];else S.indoor[ik]=true;persist();render();}
   else if(b.dataset.fri){S.fri[S.week]=b.dataset.fri;persist();render();}
   else if(b.dataset.act==="arrange"){arranging=!arranging;picked=null;render();}
