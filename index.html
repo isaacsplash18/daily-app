@@ -100,6 +100,18 @@
   .srow .s{font-size:12px;color:var(--ink4)}
   .srow.trow{background:rgba(56,189,248,.06);border-radius:8px}
   .srow.today{background:rgba(251,191,36,.07);border-radius:8px}
+  button.srow{width:100%;background:none;border:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}
+  .srow.arr{border:1px dashed #3a3a3a;margin:3px 0}
+  .srow.arr.pick{border:1px solid var(--amber);background:rgba(251,191,36,.10)}
+  .srow.arr.fixed{opacity:.45;cursor:default}
+  .grip{flex:none;width:24px;text-align:center;color:var(--amber);font-size:14px}
+  .mvtag{flex:none;margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(251,191,36,.4);border-radius:4px;padding:1px 5px}
+  .wkhead .hbtns{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .arrbtn{border:1px solid #3a3a3a;background:transparent;color:var(--ink2);border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;font-family:var(--sans)}
+  .arrbtn.on{border-color:var(--amber);color:var(--amber)}
+  .arrbar{border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:9px;padding:10px 12px;margin-top:16px;font-size:12px;color:#fde68a;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .arrbar .arrbtn{flex:none}
+  .warnb{border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.06);border-radius:9px;padding:10px 12px;margin-top:10px;font-size:12px;color:#fecaca}
   .chk{flex:none;width:24px;height:24px;border:1px solid #3a3a3a;background:transparent;color:var(--green);
     border-radius:6px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .chk.on{border-color:var(--green);background:rgba(52,211,153,.14)}
@@ -244,10 +256,31 @@ const OVR={
     lift:"Mon",q:null,mobDay:"Tue",mobLabel:"Tue (moved from Mon)",mobTick:[4,"Tue"],extraLong:{from:3,day:"Wed"},
     longNote:"Only if PSI is OK, else treadmill 60-75 min easy or a double boxing session with Fight Camp."}};
 function ovr(n){return OVR[n]||{};}
-function liftDay(n){var o=ovr(n);return o.lift||(n<NEW_FROM?"Thu":"Tue");}
-function qDay(n){var o=ovr(n);return ("q" in o)?o.q:(n<NEW_FROM?"Tue":"Thu");}
-function longDay(n){var o=ovr(n);if(o.longDay)return o.longDay;for(var k in OVR){var e=OVR[k].extraLong;if(e&&e.from===n)return e.day;}return "Sun";}
-function mobDay(n){return ovr(n).mobDay||"Mon";}
+function liftDay(n){var o=ovr(n);return dispDay(n,o.lift||(n<NEW_FROM?"Thu":"Tue"));}
+function qDay(n){var o=ovr(n);return dispDay(n,("q" in o)?o.q:(n<NEW_FROM?"Tue":"Thu"));}
+function longDay(n){var o=ovr(n);if(o.longDay)return o.longDay;for(var k in OVR){var e=OVR[k].extraLong;if(e&&e.from===n)return e.day;}return dispDay(n,"Sun");}
+function mobDay(n){return dispDay(n,baseMobDay(n));}
+function baseMobDay(n){return ovr(n).mobDay||"Mon";}
+
+// User day moves, per half-marathon week: S.moves[week][shownDay] = plannedDay whose session now sits there.
+// Ticks stay keyed by the planned day, so a session keeps its tick wherever it is moved.
+const DAYS7=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+function moveMap(n){return (S.moves&&S.moves[n])||null;}
+function srcAt(n,d){var m=moveMap(n);return (m&&m[d])||d;}
+function dispDay(n,src){var m=moveMap(n);if(!m||DAYS7.indexOf(src)<0)return src;
+  for(var i=0;i<7;i++){var d=DAYS7[i];if((m[d]||d)===src)return d;}return src;}
+function weekRows(n){var plan=schedFor(n);return DAYS7.map(function(d){var src=srcAt(n,d),r=plan.filter(function(x){return x[0]===src;})[0];
+  return [d,r[1],r[2],r[3],r[4],src];});}
+function swapDays(n,a,b){var m={};DAYS7.forEach(function(d){m[d]=srcAt(n,d);});var t=m[a];m[a]=m[b];m[b]=t;
+  if(DAYS7.every(function(d){return m[d]===d;}))delete S.moves[n];else S.moves[n]=m;persist();}
+function moveWarnings(n){
+  if(!moveMap(n))return [];
+  var rows=weekRows(n),out=[],name={quality:"quality run",long:"long run",lift:"strength"};
+  for(var i=0;i<6;i++){var a=rows[i][3],b=rows[i+1][3];
+    if((a==="quality"||a==="long")&&(b==="quality"||b==="long"))out.push(rows[i][0]+" "+name[a]+" and "+rows[i+1][0]+" "+name[b]+" are back to back — two hard days in a row. Keep one of them easy.");
+    if(a==="lift"&&(b==="quality"||b==="long"))out.push("Strength on "+rows[i][0]+" is the day before your "+name[b]+" — expect heavy legs. Skip the squat top triple that week.");}
+  return out;}
+var arranging=false,picked=null;
 function sprintNote(n){
   if(n<NEW_FROM)return "";
   if(n<=4)return " With your friend: sprints can replace this session — 6–8 × 80–100 m at 85–90%, walking back between each. Never flat-out, never cold.";
@@ -300,7 +333,7 @@ function mobHTML(){
   if(S.week<MOB_FROM)return "";
   var items=mobItems(),done=items.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length,
       mins=items.reduce(function(a,x){return a+x.m[4];},0),open=S.mobOpen!==false,sec="";
-  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">'+(ovr(S.week).mobLabel||"Mon")+' · Mobility</div>'+
+  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">'+((!moveMap(S.week)&&ovr(S.week).mobLabel)||mobDay(S.week))+' · Mobility</div>'+
     '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div><div class="accstart">kit: yoga mat · foam roller · ball · a wall</div></div>'+
     '<div class="rt" style="color:var(--green)">'+done+'<small>/'+items.length+'</small></div></div>'+
     '<div class="bar"><div style="width:'+Math.round(done/items.length*100)+'%"></div></div>'+
@@ -318,10 +351,10 @@ function mobHTML(){
 const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},ref:false,block:null,view:"new",oweek:8};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},ref:false,block:null,view:"new",oweek:8};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
-S.mob=S.mob||{};
+S.mob=S.mob||{};S.moves=S.moves||{};
 Object.keys(S.mob).forEach(function(k){var w=parseInt(k.slice(BLOCK.length),10);if(k.indexOf(BLOCK)===0&&w<MOB_FROM)delete S.mob[k];});
 if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
@@ -522,11 +555,14 @@ function stripHTML(){
   return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 21 Sep">»</div>'+cur+'</div>';}
 function schedHTML(rows,pre,isNow,td,raceSun){
   return '<div class="sched">'+rows.map(function(s){
-    var d=s[0],done=!!S.sessions[pre+d],label=s[1],sub=s[2];
-    if(raceSun&&d==="Sun"){label="RACE — 21.1 km";sub="you have done the work";}
+    var d=s[0],src=s[6]||d,done=!!S.sessions[pre+src],label=s[1],sub=s[2],fixed=raceSun&&src==="Sun";
+    if(fixed){label="RACE — 21.1 km";sub="you have done the work";}
+    var tag=src!==d?'<span class="mvtag">from '+src+'</span>':'';if(src!==d)sub="";   // its note was written for the original day
+    if(arranging)return '<button class="srow arr'+(picked===d?' pick':'')+(fixed?' fixed':'')+'" '+(fixed?'disabled':'data-pick="'+d+'"')+'>'+
+      '<span class="grip">'+(fixed?'•':'⇅')+'</span><span class="d">'+d+'</span><span class="a" style="color:'+s[5]+'">'+label+'</span>'+tag+'</button>';
     return '<div class="srow '+(done?'done':'')+' '+((isNow&&d===td)?'today':'')+'">'+
-      '<button class="chk '+(done?'on':'')+'" data-sess="'+d+'" aria-label="Mark '+d+' done">'+(done?'✓':'')+'</button>'+
-      '<span class="d">'+d+'</span><span class="a" style="color:'+s[5]+'">'+label+'</span>'+(sub?'<span class="s">'+sub+'</span>':'')+'</div>';}).join("")+'</div>';}
+      '<button class="chk '+(done?'on':'')+'" data-sess="'+src+'" aria-label="Mark '+d+' done">'+(done?'✓':'')+'</button>'+
+      '<span class="d">'+d+'</span><span class="a" style="color:'+s[5]+'">'+label+'</span>'+(sub?'<span class="s">'+sub+'</span>':'')+tag+'</div>';}).join("")+'</div>';}
 function footerHTML(){
   return '<div class="btnrow"><button class="reset" data-act="reset">Reset logs</button>'+
   '<button class="reset" data-act="copyall" data-lbl="Copy full log">Copy full log</button>'+
@@ -543,7 +579,8 @@ function moveWeek(from,to){
     if(k.indexOf(pt)===0)return;             // target's old data is dropped (caller confirmed)
     out[k.indexOf(pf)===0?pt+k.slice(pf.length):k]=obj[k];});return out;};
   S.logs=mv(S.logs,BLOCK+from+":",BLOCK+to+":");S.sessions=mv(S.sessions,BLOCK+from+":",BLOCK+to+":");
-  S.travel=mv(S.travel,BLOCK+from+":",BLOCK+to+":");S.mob=mv(S.mob,BLOCK+from+":",BLOCK+to+":");S.runs=mv(S.runs,from+":",to+":");
+  S.travel=mv(S.travel,BLOCK+from+":",BLOCK+to+":");S.mob=mv(S.mob,BLOCK+from+":",BLOCK+to+":");
+  var mf=S.moves[from];delete S.moves[to];if(mf){S.moves[to]=mf;delete S.moves[from];}S.runs=mv(S.runs,from+":",to+":");
   S.week=to;persist();render();}
 function weekHasData(n){var a=BLOCK+n+":",b=n+":";
   return Object.keys(S.logs).some(function(k){return k.indexOf(a)===0&&((S.logs[k]||{}).sets||[]).some(function(st){return st&&fmtSet(st);});})||
@@ -586,10 +623,10 @@ function sessionText(){
   var xl=ovr(S.week).extraLong;if(xl)out+=runLine("long",xl.day+" · Long run (moved from week "+xl.from+" Sun, haze; only if PSI is OK)",WEEKS[xl.from-1].long+" km",null,xl.from);
   out+=runLine("long",(S.week===RACE_WEEK?"Sun · RACE":longDay(S.week)+" · Long run"),w.long+" km");
   if(qDay(S.week))out+=runLine("quality",qDay(S.week)+" · "+w.q.n+" ("+w.q.s+")","quality");else out+="\n  No quality run this week";
-  out+=runLine("swim","Fri · Swim",(S.week===RACE_WEEK?"15":"20–30")+" min easy","m");
+  out+=runLine("swim",dispDay(S.week,"Fri")+" · Swim",(S.week===RACE_WEEK?"15":"20–30")+" min easy","m");
   if(S.week>=MOB_FROM){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
     out+="\n\nMOBILITY ("+mobDay(S.week)+")\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
-  if(ovr(S.week).sched)out+="\n\nTHIS WEEK (rescheduled for haze)"+schedFor(S.week).map(function(s){return "\n  "+s[0]+" · "+s[1]+(s[2]?" — "+s[2]:"");}).join("");
+  if(ovr(S.week).sched||moveMap(S.week))out+="\n\nTHIS WEEK ("+(moveMap(S.week)?"days moved":"rescheduled for haze")+")"+weekRows(S.week).map(function(s){return "\n  "+s[0]+" · "+s[1]+(s[5]!==s[0]?" (from "+s[5]+")":(s[2]?" — "+s[2]:""));}).join("");
   else out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===RACE_WEEK)?"":"\n  Sat · light and technical — long run tomorrow");
   out+="\n\nSTRENGTH ("+liftDay(S.week)+")";
   mainsFor(S.week).forEach(function(m){
@@ -635,7 +672,7 @@ function buildCSV(){
   var rows=[["Category","Week","Day","Item","Set","Weight","Reps","Distance","Time","Done","Key"]];
   RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
   for(var wk=1;wk<=WEEKS.length;wk++){
-    [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim","Fri"]].forEach(function(s){
+    [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim",dispDay(wk,"Fri")]].forEach(function(s){
       var key=wk+":"+s[0],lg=S.runs[key]||{};
       if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push([s[0]==="swim"?"Swim":"Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
     mainsFor(wk).forEach(function(m){
@@ -648,6 +685,7 @@ function buildCSV(){
   Object.keys(S.sessions).forEach(function(key){if(S.sessions[key])rows.push(["Session","","","","","","","","","yes",key]);});
   Object.keys(S.mob).forEach(function(key){if(!S.mob[key])return;var p=key.slice(BLOCK.length).split(":"),it=MOB[+p[2]];
     rows.push(["Mobility",p[0],mobDay(+p[0]),it?it[1]:"","","","","","","yes",key]);});
+  Object.keys(S.moves).forEach(function(wk){var m=S.moves[wk]||{};DAYS7.forEach(function(d){if(m[d]&&m[d]!==d)rows.push(["Move",wk,d,m[d],"","","","","","",wk+":"+d]);});});
   // Anything logged in an earlier block stays exportable.
   Object.keys(S.logs).forEach(function(key){
     if(key.indexOf(BLOCK)===0)return;
@@ -678,7 +716,7 @@ function importCSV(text){
   var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
   ["category","week","day","item","set","weight","reps","distance","time","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
   if(ci.category<0||ci.key<0)return false;
-  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nRMs=Object.assign({},S.oneRMs);
+  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nRMs=Object.assign({},S.oneRMs);
   var g=function(r,n){return ci[n]>=0?(r[ci[n]]||"").trim():"";};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
@@ -691,9 +729,11 @@ function importCSV(text){
       if(wt!=="")e.sets[si-1].w=wt;if(rp!=="")e.sets[si-1].r=rp;}
     else if(cat==="Session"){if(key)nSess[key]=true;}
     else if(cat==="Mobility"){if(key)nMob[key]=true;}
+    else if(cat==="Move"){var mp=key.split(":"),it2=g(r,"item");if(mp.length===2&&DAYS7.indexOf(mp[1])>=0&&DAYS7.indexOf(it2)>=0){(nMoves[mp[0]]=nMoves[mp[0]]||{})[mp[1]]=it2;}}
     else if(cat==="Travel"){if(key)nTrav[key]=true;}
   }
-  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;persist();render();return true;
+  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;
+  Object.keys(nMoves).forEach(function(wk){DAYS7.forEach(function(d){if(!nMoves[wk][d])nMoves[wk][d]=d;});});S.moves=nMoves;persist();render();return true;
 }
 
 // ---------- views ----------
@@ -762,14 +802,18 @@ function render(){
   '<span class="badge" style="color:'+PHASE[w.phase]+';border-color:'+PHASE[w.phase]+'">'+w.phase+'</span>'+
   (doneCount?'<span class="donecount">'+doneCount+' done</span>':'')+
   '<div class="dates">'+weekRange(S.week)+(isNow?' · this week':'')+'</div></div>'+
-  '<span class="hint">tap ✓ when done</span></div>'+
+  '<div class="hbtns"><span class="hint">tap ✓ when done</span>'+
+  '<button class="arrbtn'+(arranging?' on':'')+'" data-act="arrange">'+(arranging?'Done':'⇅ Move days')+'</button></div></div>'+
+  (arranging?'<div class="arrbar"><span>'+(picked?'Now tap the day to swap <b>'+picked+'</b> with.':'Tap a day, then the day to swap it with.')+'</span>'+
+    (moveMap(S.week)?'<button class="arrbtn" data-act="arrange-reset">Reset week</button>':'')+'</div>':'')+
+  moveWarnings(S.week).map(function(t){return '<div class="warnb">'+esc(t)+'</div>';}).join("")+
 
-  schedHTML(schedFor(S.week).map(function(s){return [s[0],s[1],s[2],null,null,s[4]];}),K()+":",isNow,td,S.week===RACE_WEEK)+
+  schedHTML(weekRows(S.week).map(function(r){return [r[0],r[1],r[2],null,null,r[4],r[5]];}),K()+":",isNow,td,S.week===RACE_WEEK)+
 
-  (ovr(S.week).extraLong?(function(e){var pw=WEEKS[e.from-1];return runHTML("long",e.day,"Long run (moved from Sun, haze)",pw.long,"km","week "+e.from+"'s long run, easy",ovr(S.week).longNote,"key",null,e.from);})(ovr(S.week).extraLong):"")+
-  runHTML("long",(ovr(S.week).longDay?"Wed":"Sun"),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",w.lnote,(S.week===RACE_WEEK?"race":"key"))+
+  (ovr(S.week).extraLong?(function(e){var pw=WEEKS[e.from-1];return runHTML("long",dispDay(S.week,e.day),"Long run (moved from Sun, haze)",pw.long,"km","week "+e.from+"'s long run, easy",ovr(S.week).longNote,"key",null,e.from);})(ovr(S.week).extraLong):"")+
+  runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",w.lnote,(S.week===RACE_WEEK?"race":"key"))+
   ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session","the one hard run",w.q.d+sprintNote(S.week),"key"):"")+
-  runHTML("swim","Fri","Swim",(S.week===RACE_WEEK?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
+  runHTML("swim",dispDay(S.week,"Fri"),"Swim",(S.week===RACE_WEEK?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
 
   mobHTML()+
   liftHTML()+
@@ -828,14 +872,19 @@ app.addEventListener("change",function(e){
 });
 app.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
-  if(b.dataset.week){S.view="new";S.week=Number(b.dataset.week);persist();render();}
-  else if(b.dataset.oweek){S.view="old";S.oweek=Number(b.dataset.oweek);persist();render();}
+  if(b.dataset.week){arranging=false;picked=null;S.view="new";S.week=Number(b.dataset.week);persist();render();}
+  else if(b.dataset.oweek){arranging=false;picked=null;S.view="old";S.oweek=Number(b.dataset.oweek);persist();render();}
   else if(b.dataset.act==="move"){
     var from=S.week,ans=prompt("Move ALL of week "+from+"'s logs (runs, lifts, checkmarks) to which week? (1–"+WEEKS.length+")");
     if(ans==null)return;var to=parseInt(ans,10);
     if(isNaN(to)||to<1||to>WEEKS.length||to===from){alert("Pick a different week between 1 and "+WEEKS.length+".");return;}
     if(weekHasData(to)&&!confirm("Week "+to+" already has logs. They will be REPLACED by week "+from+"'s. Continue?"))return;
     moveWeek(from,to);}
+  else if(b.dataset.act==="arrange"){arranging=!arranging;picked=null;render();}
+  else if(b.dataset.act==="arrange-reset"){delete S.moves[S.week];picked=null;persist();render();}
+  else if(b.dataset.pick){var d=b.dataset.pick;
+    if(!picked)picked=d;else if(picked===d)picked=null;else{swapDays(S.week,picked,d);picked=null;}
+    render();}
   else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;if(S.sessions[k])delete S.sessions[k];else S.sessions[k]=true;persist();render();}
   else if(b.dataset.mob){var mk=K()+":mob:"+b.dataset.mob;
     if(S.mob[mk])delete S.mob[mk];
