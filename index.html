@@ -181,7 +181,7 @@
 <div class="wrap" id="app"></div>
 <script>
 const RACE={name:"BYD Singapore International Marathon",event:"Half Marathon · 21.1 km",date:"2026-12-06",meta:"F1 Pit Building → National Stadium · 3h45 cut-off"};
-const START="2026-09-21"; // Monday of week 1
+const START="2026-09-28"; // Monday of week 1
 const BLOCK="hm26";
 
 const WEEKS=[
@@ -201,11 +201,9 @@ const WEEKS=[
   q:{n:"Intervals",s:"5 × 3 min @ 10k effort",d:"Jog 2 min between. Sharp but short."},sets:2,easy:[5,6]},
  {n:8,phase:"Peak",pct:.75,long:19,lnote:"Peak long run. Full dress rehearsal — race kit, race breakfast, race fuelling.",
   q:{n:"Tempo",s:"2 × 15 min @ half pace",d:"3 min jog between. The key session of the whole block."},sets:2,easy:[6,7]},
- {n:9,phase:"Taper",pct:.70,long:16,lnote:"Taper starts. Volume drops, effort stays sharp. Resist adding anything.",
+ {n:9,phase:"Taper",pct:.70,long:14,lnote:"Taper starts. Volume drops, effort stays sharp. Resist adding anything.",
   q:{n:"Sharpener",s:"4 × 3 min @ 10k effort",d:"Jog 2 min. Should feel springy, not tiring."},sets:2,easy:[5,5]},
- {n:10,phase:"Taper",pct:.70,long:13,lnote:"Second taper week. Keep the legs sharp, nothing new.",
-  q:{n:"Sharpener",s:"4 × 2 min @ 10k effort",d:"Jog 2 min between. Short, springy, done before you feel it."},sets:2,easy:[5,5]},
- {n:11,phase:"Race",pct:.60,long:21.1,lnote:"RACE DAY. Go out slower than feels right for the first 5 km — you'll thank yourself at 18.",
+ {n:10,phase:"Race",pct:.60,long:21.1,lnote:"RACE DAY. Go out slower than feels right for the first 5 km — you'll thank yourself at 18.",
   q:{n:"Primer",s:"3 × 2 min @ race pace",d:"Three days out from the race. Short and sharp, then rest up and eat well."},sets:1,easy:[4,4]}];
 
 const RACE_WEEK=WEEKS.length; // race week is always the last week
@@ -242,19 +240,9 @@ const ACC3=[
  ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
 function mainsFor(n){return n<NEW_FROM?MAINS:[MAINS[0],MAINS[1],OHP,MAINS[2]];}
 function accFor(n){return n<NEW_FROM?ACC:ACC3;}
-// Per-week overrides (haze / PSI reschedules). Only the listed weeks change; log keys never change.
-// Week 3: Sun 11 Oct long run postponed (haze); week 3's mobility done that day instead.
-// Week 4: lift Mon, mobility + easy Tue, week 3's 15 km long run on Wed (3:long key), easy Thu, no quality run.
-const OVR={
- 3:{sched:{Mon:["Mon","Mobility — moved to Sun (haze)","done Sun 11 Oct",null,"var(--ink4)"],
-    Sun:["Sun","Mobility (moved from Mon, haze)","long run moved to Wed 14 Oct","mob","var(--green)"]},
-    longDay:"Wed 14 Oct",longTitle:"Long run (moved to Wed 14 Oct, haze)",mobDay:"Sun",mobLabel:"Sun 11 Oct (moved from Mon, haze)",mobTick:[3,"Sun"]},
- 4:{sched:{Mon:["Mon","Strength","gym, moved from Tue","lift","var(--amber)"],
-    Tue:["Tue","Mobility + easy / one boxing class","mobility moved from Mon, single class only","mob","var(--green)"],
-    Wed:["Wed","Long run (moved from Sun, haze)","only if PSI is OK","long","var(--green)"],
-    Thu:["Thu","Easy / one boxing class","no quality run this week",null,"var(--ink2)"]},
-    lift:"Mon",q:null,mobDay:"Tue",mobLabel:"Tue (moved from Mon)",mobTick:[4,"Tue"],extraLong:{from:3,day:"Wed"},
-    longNote:"Only if PSI is OK, else treadmill 60-75 min easy or a double boxing session with Fight Camp."}};
+// One-off week rewrites, keyed by week. The October haze weeks were reverted to the normal plan;
+// day-to-day changes now go through "Move days" (S.moves) instead.
+const OVR={};
 function ovr(n){return OVR[n]||{};}
 function liftDay(n){var o=ovr(n);return dispDay(n,o.lift||(n<NEW_FROM?"Thu":"Tue"));}
 function qDay(n){var o=ovr(n);return dispDay(n,("q" in o)?o.q:(n<NEW_FROM?"Tue":"Thu"));}
@@ -355,7 +343,6 @@ let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},m
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
 S.mob=S.mob||{};S.moves=S.moves||{};
-Object.keys(S.mob).forEach(function(k){var w=parseInt(k.slice(BLOCK.length),10);if(k.indexOf(BLOCK)===0&&w<MOB_FROM)delete S.mob[k];});
 if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
@@ -370,7 +357,27 @@ function currentWeek(){
 }
 function todayDay(){return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
 // New block: reset the selected week, keep every old log for export.
-if(S.block!==BLOCK){S.block=BLOCK;S.week=currentWeek();persist();}
+if(S.block!==BLOCK){S.block=BLOCK;S.week=currentWeek();S.shift28=true;persist();}
+// During the haze the dates briefly ran from 21 Sep, and logs from 11 Oct were entered one week tab ahead.
+// With the block back on 28 Sep, everything from week 3 on moves back one week (week 3 merges into week 2,
+// where week 2's own entries win). Runs once; the previous data is kept for Undo.
+function shiftBackOneWeek(){
+  var moved=0;
+  var blockKey=function(k){if(k.indexOf(BLOCK)!==0)return null;var m=k.slice(BLOCK.length).match(/^(\d+)(:.*)$/);
+    return (m&&+m[1]>=3)?BLOCK+(+m[1]-1)+m[2]:null;};
+  var runKey=function(k){var m=k.match(/^(\d+)(:.*)$/);return (m&&+m[1]>=3)?(+m[1]-1)+m[2]:null;};
+  var weekKey=function(k){return /^\d+$/.test(k)&&+k>=3?String(+k-1):null;};
+  var apply=function(obj,fn){var out={},later=[];
+    Object.keys(obj).forEach(function(k){var nk=fn(k);if(nk===null)out[k]=obj[k];else later.push([nk,obj[k]]);});
+    later.forEach(function(p){if(!(p[0] in out)){out[p[0]]=p[1];moved++;}});return out;};
+  S.logs=apply(S.logs,blockKey);S.sessions=apply(S.sessions,blockKey);S.mob=apply(S.mob,blockKey);
+  S.travel=apply(S.travel,blockKey);S.runs=apply(S.runs,runKey);S.moves=apply(S.moves,weekKey);
+  return moved;}
+if(!S.shift28){
+  try{localStorage.setItem("ss_state_before_shift28",JSON.stringify(S));}catch(e){}
+  var nMoved=shiftBackOneWeek();S.shift28=true;S.week=currentWeek();if(nMoved)S.shiftNote=nMoved;persist();}
+function undoShift(){try{var r=localStorage.getItem("ss_state_before_shift28");if(!r)return false;
+  S=Object.assign(S,JSON.parse(r));S.shift28=true;delete S.shiftNote;S.week=currentWeek()+1;persist();return true;}catch(e){return false;}}
 
 const r25=v=>Math.round(v/2.5)*2.5;
 const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
@@ -552,7 +559,7 @@ function stripHTML(){
   var cur=WEEKS.map(function(wk){var a=S.view==="new"&&wk.n===S.week;
     return '<button class="wk '+(a?'active':'')+' '+(wk.n===currentWeek()?'now':'')+'" data-week="'+wk.n+'"><span>'+wk.n+'</span>'+
       '<span class="dot" style="background:'+(a?'#0a0a0a':PHASE[wk.phase])+'"></span></button>';}).join("");
-  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 21 Sep">»</div>'+cur+'</div>';}
+  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 28 Sep">»</div>'+cur+'</div>';}
 function schedHTML(rows,pre,isNow,td,raceSun){
   return '<div class="sched">'+rows.map(function(s){
     var d=s[0],src=s[6]||d,done=!!S.sessions[pre+src],label=s[1],sub=s[2],fixed=raceSun&&src==="Sun";
@@ -595,7 +602,7 @@ function renderOld(){
   '<div class="eyebrow" style="color:var(--amber)">Previous block · Strength System</div>'+
   '<h1>The Block</h1>'+
   '<p class="lead">Twelve-week strength block. You completed week 8, then the program changed.</p>'+
-  '<div class="obanner"><b>You are looking back.</b> These are the weeks before the half-marathon block started on 21 Sep. Everything here is still yours to edit. Targets recalculate from whatever maxes are entered above — your logged sets are what you actually lifted. Tap » in the strip to return to the current program.</div>'+
+  '<div class="obanner"><b>You are looking back.</b> These are the weeks before the half-marathon block started on 28 Sep. Everything here is still yours to edit. Targets recalculate from whatever maxes are entered above — your logged sets are what you actually lifted. Tap » in the strip to return to the current program.</div>'+
   rewardHTML()+
   maxesHTML("Set these to what they were at the time if you want the old targets to read as they did.")+
   stripHTML()+
@@ -789,8 +796,13 @@ function render(){
   document.getElementById("app").innerHTML=
   '<div class="eyebrow">Half Marathon Block</div>'+
   '<h1>The Half</h1>'+
-  '<p class="lead">Eleven weeks. One gym day. The long run is the block.</p>'+
+  '<p class="lead">Ten weeks. One gym day. The long run is the block.</p>'+
 
+  (S.shiftNote?'<div class="obanner"><b>Dates fixed.</b> The block runs from 28 Sep again, so this is week '+currentWeek()+'. '+
+    'Everything you logged one tab ahead since 11 Oct has moved back a week to its real dates ('+S.shiftNote+' entries). '+
+    'From now on, log in the week the app shows.'+
+    '<div class="btnrow" style="justify-content:flex-start;margin-top:10px"><button class="arrbtn on" data-act="shift-ok">Looks right</button>'+
+    '<button class="arrbtn" data-act="shift-undo">Undo</button></div></div>':'')+
   '<div class="count"><div><div class="cdays">'+(d2r>0?d2r:0)+'</div><div class="clbl">'+(d2r>0?"days to go":d2r===0?"race day":"done")+'</div></div>'+
   '<div class="cright"><div class="crace">Sun 6 Dec · '+RACE.event+'</div><div class="cmeta">'+RACE.name+'</div><div class="cmeta">'+RACE.meta+'</div></div></div>'+
   rewardHTML()+
@@ -834,7 +846,7 @@ function render(){
     '<h4>Boxing alongside the running</h4>'+
     '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Wednesday is the full session. Saturday stays light and technical — pads, footwork and drills, no hard conditioning rounds — because you run long the next morning. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: the quality run and the long run. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
-    '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–11</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
+    '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
     '<p>Week 8 is your dress rehearsal — race kit, race breakfast, race fuelling, nothing new. On the day, run the first 5 km slower than feels right. A half is won in the last 5 km, and the cut-off is 3h45, so there is no need to panic early.</p>'+
     '<h4>If something hurts</h4>'+
@@ -880,6 +892,8 @@ app.addEventListener("click",function(e){
     if(isNaN(to)||to<1||to>WEEKS.length||to===from){alert("Pick a different week between 1 and "+WEEKS.length+".");return;}
     if(weekHasData(to)&&!confirm("Week "+to+" already has logs. They will be REPLACED by week "+from+"'s. Continue?"))return;
     moveWeek(from,to);}
+  else if(b.dataset.act==="shift-ok"){delete S.shiftNote;persist();render();}
+  else if(b.dataset.act==="shift-undo"){if(confirm("Put your logs back where they were (one week ahead)?")){if(!undoShift())alert("No backup found.");render();}}
   else if(b.dataset.act==="arrange"){arranging=!arranging;picked=null;render();}
   else if(b.dataset.act==="arrange-reset"){delete S.moves[S.week];picked=null;persist();render();}
   else if(b.dataset.pick){var d=b.dataset.pick;
