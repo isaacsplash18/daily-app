@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="The Half" />
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<title>Half Marathon Block</title>
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#171717; --panel2:#1f1f1f; --line:#2a2a2a;
+    --ink:#e5e5e5; --ink2:#a3a3a3; --ink3:#737373; --ink4:#525252;
+    --amber:#fbbf24; --red:#f87171; --green:#34d399; --sky:#38bdf8;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    padding:24px 16px calc(40px + env(safe-area-inset-bottom));}
+  .wrap{max-width:480px;margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--sky)}
+  h1{margin:4px 0 0;font-size:26px;letter-spacing:-.02em;color:#fafafa}
+  .lead{margin:6px 0 0;font-size:12px;color:var(--ink3)}
+  .count{border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.06);border-radius:12px;
+    padding:14px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .cdays{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--sky);line-height:1}
+  .clbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);margin-top:3px}
+  .cright{text-align:right}
+  .crace{font-size:13px;font-weight:600;color:var(--ink)}
+  .cmeta{font-size:11px;color:var(--ink3);margin-top:2px}
+  .card{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;margin-top:16px}
+  .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)}
+  .maxes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .maxes label{display:block}
+  .maxes span{display:block;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);margin-bottom:4px}
+  input{font-family:var(--mono);background:var(--bg);border:1px solid #3a3a3a;border-radius:6px;
+    color:var(--ink);text-align:center;padding:8px 2px;width:100%;font-size:14px}
+  input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+  .maxes input{color:var(--amber);font-weight:700}
+  .strip{display:flex;gap:6px;overflow-x:auto;padding:16px 0 4px;-webkit-overflow-scrolling:touch}
+  .wk{position:relative;flex:0 0 auto;width:40px;height:48px;border:1px solid var(--line);background:var(--panel);
+    border-radius:9px;color:var(--ink2);font-weight:600;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:4px;cursor:pointer;font-family:var(--mono)}
+  .wk.active{background:var(--sky);border-color:var(--sky);color:#0a0a0a}
+  .wk.now{box-shadow:0 0 0 1px var(--amber)}
+  .wk.old{color:var(--ink3)}
+  .wk.old.active{background:var(--amber);border-color:var(--amber);color:#0a0a0a}
+  .wkdiv{flex:0 0 auto;width:22px;height:48px;display:flex;align-items:center;justify-content:center;color:var(--ink4);font-family:var(--mono);font-size:12px}
+  .power{border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.06);border-radius:9px;padding:12px;margin-bottom:14px}
+  .powerh{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+  .powerm{font-size:14px;font-weight:600;color:var(--ink);margin-top:4px}
+  .powers{font-size:12px;color:var(--ink2);margin-top:4px}
+  .obanner{border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:12px;padding:14px;margin-top:16px;font-size:12px;color:#fde68a}
+  .obanner b{color:#fff}
+  .rew{border-color:rgba(52,211,153,.3)}
+  .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .rt2{text-align:center}
+  .rv{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green);line-height:1}
+  .rv small{font-size:11px;color:var(--ink4);font-weight:500}
+  .rl{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink4);margin-top:4px}
+  .rsub{font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:10px;text-align:center}
+  .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .badge2{border:1px solid rgba(52,211,153,.35);background:rgba(52,211,153,.08);color:var(--green);border-radius:6px;padding:3px 7px;font-size:11px}
+  .nextb{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:12px;font-size:12px;color:var(--ink2)}
+  .nextb b{color:var(--ink)} .nextb .p{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+  .bar{height:4px;background:#2a2a2a;border-radius:2px;margin-top:6px;overflow:hidden}
+  .bar div{height:100%;background:var(--green);border-radius:2px}
+  .day.mob{border-color:rgba(52,211,153,.3)}
+  .mobhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .rt small{font-size:13px;color:var(--ink4)}
+  .mobsec{margin:16px 0 2px;color:var(--green)}
+  .mobrow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+  .mobsec+.mobrow{border-top:none}
+  .mobtxt{flex:1;min-width:0}
+  .mobtop{display:flex;justify-content:space-between;gap:8px}
+  .mobname{font-size:13px;color:var(--ink)}
+  .mobtop .p{font-family:var(--mono);font-size:11px;color:var(--ink3);white-space:nowrap}
+  .mobcue{font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.45}
+  .mobrow.done .mobname{text-decoration:line-through;opacity:.5}
+  .mobrow.done .mobcue{opacity:.4}
+  .dot{width:4px;height:4px;border-radius:50%}
+  .wk .plane{position:absolute;top:3px;right:4px;font-size:9px;color:var(--sky);font-family:var(--sans)}
+  .wkhead{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+  .badge{border:1px solid;border-radius:5px;padding:2px 6px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.15em;text-transform:uppercase;margin-left:8px}
+  .dates{font-family:var(--mono);font-size:10px;color:var(--ink4);margin-top:3px}
+  .donecount{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--green);margin-left:8px}
+  .hint{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4)}
+  .tbanner{border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.06);border-radius:9px;
+    padding:12px;font-size:12px;color:#bae6fd;margin-top:16px}
+  .sched{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:6px;margin-top:16px}
+  .srow{display:flex;align-items:center;gap:10px;padding:8px}
+  .srow .d{width:34px;font-family:var(--mono);font-size:12px;color:var(--ink3)}
+  .srow .a{font-size:14px}
+  .srow .s{font-size:12px;color:var(--ink4)}
+  .srow.trow{background:rgba(56,189,248,.06);border-radius:8px}
+  .srow.today{background:rgba(251,191,36,.07);border-radius:8px}
+  button.srow{width:100%;background:none;border:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}
+  .srow.arr{border:1px dashed #3a3a3a;margin:3px 0}
+  .srow.arr.pick{border:1px solid var(--amber);background:rgba(251,191,36,.10)}
+  .srow.arr.fixed{opacity:.45;cursor:default}
+  .grip{flex:none;width:24px;text-align:center;color:var(--amber);font-size:14px}
+  .mvtag{flex:none;margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(251,191,36,.4);border-radius:4px;padding:1px 5px}
+  .wkhead .hbtns{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .arrbtn{border:1px solid #3a3a3a;background:transparent;color:var(--ink2);border-radius:7px;padding:4px 9px;font-size:11px;cursor:pointer;font-family:var(--sans)}
+  .arrbtn.on{border-color:var(--amber);color:var(--amber)}
+  .arrbar{border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:9px;padding:10px 12px;margin-top:16px;font-size:12px;color:#fde68a;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .arrbar .arrbtn{flex:none}
+  .warnb{border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.06);border-radius:9px;padding:10px 12px;margin-top:10px;font-size:12px;color:#fecaca}
+  .chk{flex:none;width:24px;height:24px;border:1px solid #3a3a3a;background:transparent;color:var(--green);
+    border-radius:6px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .chk.on{border-color:var(--green);background:rgba(52,211,153,.14)}
+  .srow.done .a{text-decoration:line-through}
+  .srow.done .a,.srow.done .s{opacity:.5}
+  .planebtn{margin-left:auto;flex:none;width:28px;height:28px;border:1px solid #2a2a2a;background:transparent;
+    color:var(--ink4);border-radius:7px;font-size:13px;cursor:pointer;line-height:1}
+  .planebtn.on{border-color:var(--sky);background:rgba(56,189,248,.12);color:#7dd3fc}
+  .run{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;margin-top:16px}
+  .run.key{border-color:rgba(56,189,248,.35)}
+  .run.race{border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.05)}
+  .rtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .rname{font-size:14px;font-weight:600;color:var(--ink)}
+  .rspec{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-top:2px}
+  .rt{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--sky);line-height:1;text-align:right}
+  .run.race .rt{color:var(--red)}
+  .runit{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink4);text-align:right;margin-top:2px}
+  .rnote{font-size:12px;color:var(--ink2);margin-top:8px}
+  .day{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:16px;margin-top:16px}
+  .dhead{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+  .main{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .main:first-of-type{border-top:none;padding-top:0;margin-top:0}
+  .mtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .mname{font-size:14px;font-weight:600;color:var(--ink)}
+  .mspec{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-top:2px}
+  .wt{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber);line-height:1;text-align:right}
+  .unit{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink4);text-align:right;margin-top:2px}
+  .mnote{font-size:12px;color:var(--ink2);margin-top:6px}
+  .fallback{font-size:12px;color:var(--ink2);margin-top:6px}
+  .fallback b{color:var(--ink);font-weight:600}
+  .logrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .logrow input{width:56px}
+  .setn{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);width:38px}
+  input::placeholder{color:var(--ink4)}
+  .x{font-family:var(--mono);color:var(--ink4);font-size:12px}
+  .acc{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+  .acc li{font-size:12px;color:var(--ink2);list-style:none;padding:3px 0}
+  .acc li+li{border-top:1px solid var(--line);margin-top:10px;padding-top:12px}
+  .acctop{display:flex;justify-content:space-between}
+  .accstart{font-family:var(--mono);font-size:10px;color:var(--ink4);margin-top:1px}
+  .accnote{font-size:10px;color:var(--ink4);margin:4px 0 4px}
+  .acc ul{margin:6px 0 0;padding:0}
+  .acc .p{font-family:var(--mono);color:var(--ink3)}
+  .warm{border:1px solid var(--line);background:#0d0d0d;border-radius:9px;padding:10px 12px;margin-bottom:14px}
+  .warmh{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);opacity:.85}
+  .warmi{font-size:12px;color:var(--ink);margin-top:4px}
+  .ramp{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:6px}
+  .ramp b{color:var(--ink2);font-weight:600}
+  .ref{border:1px solid var(--line);background:var(--panel);border-radius:12px;margin-top:16px}
+  .ref>button{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;
+    border:none;color:var(--ink2);padding:16px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .refbody{padding:0 16px 16px}
+  .ref h4{margin:0 0 4px;font-size:13px;color:var(--ink)}
+  .ref p{margin:0 0 14px;font-size:12px;color:var(--ink2);line-height:1.5}
+  .ref p:last-child{margin-bottom:0}
+  .reset{display:block;background:none;border:none;color:var(--ink4);font-size:12px;cursor:pointer}
+  .btnrow{display:flex;gap:18px;justify-content:center;margin-top:18px}
+  .copybtn{margin-top:14px;width:100%;background:transparent;border:1px solid #2a2a2a;color:var(--ink2);
+    border-radius:9px;padding:9px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+  .copybtn:active{border-color:var(--amber);color:var(--amber)}
+  .foot{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#404040;margin-top:18px}
+  .g{color:var(--green)} .a{color:var(--amber)} .r{color:var(--red)} .sk{color:var(--sky)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const RACE={name:"BYD Singapore International Marathon",event:"Half Marathon · 21.1 km",date:"2026-12-06",meta:"F1 Pit Building → National Stadium · 3h45 cut-off"};
+const START="2026-09-28"; // Monday of week 1
+const BLOCK="hm26";
+
+const WEEKS=[
+ {n:1,phase:"Base",pct:.70,long:12,lnote:"Conversational the whole way. If you can't talk, slow down.",
+  q:{n:"Fartlek",s:"6 × 1 min @ 5k effort",d:"Easy 5 km around it, jog 90 s between reps. Gentle re-entry — you've had time off."},sets:3,easy:[5,5]},
+ {n:2,phase:"Base",pct:.725,long:14,lnote:"Same easy effort, just longer. Nothing heroic.",
+  q:{n:"Fartlek",s:"8 × 1 min @ 5k effort",d:"Jog 90 s between. Finish feeling you could have done two more."},sets:3,easy:[5,6]},
+ {n:3,phase:"Build",pct:.75,long:15,lnote:"Last 3 km a touch quicker if it genuinely feels good.",
+  q:{n:"Intervals",s:"5 × 3 min @ 10k effort",d:"Jog 2 min between. Controlled — this is not a race."},sets:3,easy:[6,6]},
+ {n:4,phase:"Cutback",pct:.675,long:11,lnote:"Cutback week. Keep it properly easy — this is where you absorb the work.",
+  q:{n:"Easy + strides",s:"6 × 20 s strides",d:"After an easy 5 km. Walk back to full recovery between each."},sets:2,easy:[5,5]},
+ {n:5,phase:"Build",pct:.75,long:16,lnote:"Start practising race fuelling and your drink here.",
+  q:{n:"Tempo",s:"3 × 8 min @ half pace",d:"90 s jog between. This effort is your goal race pace — learn how it feels."},sets:3,easy:[6,6]},
+ {n:6,phase:"Build",pct:.775,long:17,lnote:"Longest so far. Settle in early, stay patient.",
+  q:{n:"Tempo",s:"4 × 8 min @ half pace",d:"90 s jog between. Should feel 'comfortably hard', never desperate."},sets:3,easy:[6,7]},
+ {n:7,phase:"Cutback",pct:.70,long:13,lnote:"Cutback. Let the legs come back up before the peak.",
+  q:{n:"Intervals",s:"5 × 3 min @ 10k effort",d:"Jog 2 min between. Sharp but short."},sets:2,easy:[5,6]},
+ {n:8,phase:"Peak",pct:.75,long:19,lnote:"Peak long run. Full dress rehearsal — race kit, race breakfast, race fuelling.",
+  q:{n:"Tempo",s:"2 × 15 min @ half pace",d:"3 min jog between. The key session of the whole block."},sets:2,easy:[6,7]},
+ {n:9,phase:"Taper",pct:.70,long:14,lnote:"Taper starts. Volume drops, effort stays sharp. Resist adding anything.",
+  q:{n:"Sharpener",s:"4 × 3 min @ 10k effort",d:"Jog 2 min. Should feel springy, not tiring."},sets:2,easy:[5,5]},
+ {n:10,phase:"Race",pct:.60,long:21.1,lnote:"RACE DAY. Go out slower than feels right for the first 5 km — you'll thank yourself at 18.",
+  q:{n:"Primer",s:"3 × 2 min @ race pace",d:"Three days out from the race. Short and sharp, then rest up and eat well."},sets:1,easy:[4,4]}];
+
+const RACE_WEEK=WEEKS.length; // race week is always the last week
+
+const PHASE={Base:"#a3a3a3",Build:"var(--amber)",Cutback:"var(--green)",Peak:"var(--red)",Taper:"var(--green)",Race:"var(--red)"};
+
+const MAINS=[
+ {k:"squat",name:"Back squat",rm:"squat",reps:5,top:3,topAdj:.075,adj:0,
+  note:"Brace hard before every rep, own the descent, drive up through the whole foot. The top triple is the strength stimulus — make it clean, never a grind. Legs still heavy from the long run? Skip the top triple and do the back-offs only.",
+  fallback:"Goblet or split squat — 3 × 10 / leg @ RPE 7"},
+ {k:"bench",name:"Bench press",rm:"bench",reps:5,top:3,topAdj:.075,adj:0,
+  note:"Feet planted, shoulder blades pinned, a beat of pause on the chest. Upper body can keep building through this block — when the top triple feels easy, raise your bench max.",
+  fallback:"Push-ups — 3 sets, stop 2 reps short"},
+ {k:"rdl",name:"Romanian deadlift",rm:"deadlift",reps:6,fixed:.65,
+  note:"Hinge from the hips, soft knees, bar glued to the legs. Hamstrings, not lower back. This is what keeps your posterior chain strong for the running.",
+  fallback:"Single-leg RDL — 3 × 10 / leg, bodyweight or a loaded bag"}];
+
+const ACC=[
+ ["Barbell row","3 sets × 8 reps","~40kg · chest to the bar, no heaving from the hips"],
+ ["Pull-up","3 sets × 6–8 reps","BW · band-assist or +load to fit reps"],
+ ["Calf raise","2 sets × 15 reps","BW or ~20kg · your best insurance against calf and achilles trouble"],
+ ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
+
+// From week 3 the strength day moves to Tuesday (quality run to Thursday, with a friend),
+// overhead press joins bench every week, pull-ups go first and the row becomes a dumbbell row.
+const NEW_FROM=3;
+const OHP={k:"ohp",name:"Overhead press",rm:"ohp",reps:6,adj:-0.05,
+  note:"Squeeze glutes and abs, bar over mid-foot, push your head through at the top. This is your shoulder strength — when every set of 6 feels comfortable, raise your OHP max.",
+  fallback:"Pike push-ups — 3 × 6–10"};
+const ACC3=[
+ ["Pull-up","3 sets × 6–8 reps","BW · band-assist or +load to fit reps"],
+ ["Single-arm dumbbell row","3 sets × 8 reps each arm","~16–22kg · one hand and knee on a bench, pull to the hip"],
+ ["Calf raise","2 sets × 15 reps","BW or ~20kg · your best insurance against calf and achilles trouble"],
+ ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
+function mainsFor(n){return n<NEW_FROM?MAINS:[MAINS[0],MAINS[1],OHP,MAINS[2]];}
+function accFor(n){return n<NEW_FROM?ACC:ACC3;}
+// One-off week rewrites, keyed by week. The October haze weeks were reverted to the normal plan;
+// day-to-day changes now go through "Move days" (S.moves) instead.
+const OVR={};
+function ovr(n){return OVR[n]||{};}
+function liftDay(n){var o=ovr(n);return dispDay(n,o.lift||(n<NEW_FROM?"Thu":"Tue"));}
+function qDay(n){var o=ovr(n);return dispDay(n,("q" in o)?o.q:(n<NEW_FROM?"Tue":"Thu"));}
+function longDay(n){var o=ovr(n);if(o.longDay)return o.longDay;for(var k in OVR){var e=OVR[k].extraLong;if(e&&e.from===n)return e.day;}return dispDay(n,"Sun");}
+function mobDay(n){return dispDay(n,baseMobDay(n));}
+function baseMobDay(n){return ovr(n).mobDay||"Mon";}
+
+// User day moves, per half-marathon week: S.moves[week][shownDay] = plannedDay whose session now sits there.
+// Ticks stay keyed by the planned day, so a session keeps its tick wherever it is moved.
+const DAYS7=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+function moveMap(n){return (S.moves&&S.moves[n])||null;}
+function srcAt(n,d){var m=moveMap(n);return (m&&m[d])||d;}
+function dispDay(n,src){var m=moveMap(n);if(!m||DAYS7.indexOf(src)<0)return src;
+  for(var i=0;i<7;i++){var d=DAYS7[i];if((m[d]||d)===src)return d;}return src;}
+function weekRows(n){var plan=schedFor(n);return DAYS7.map(function(d){var src=srcAt(n,d),r=plan.filter(function(x){return x[0]===src;})[0];
+  return [d,r[1],r[2],r[3],r[4],src];});}
+function swapDays(n,a,b){var m={};DAYS7.forEach(function(d){m[d]=srcAt(n,d);});var t=m[a];m[a]=m[b];m[b]=t;
+  if(DAYS7.every(function(d){return m[d]===d;}))delete S.moves[n];else S.moves[n]=m;persist();}
+function moveWarnings(n){
+  if(!moveMap(n))return [];
+  var rows=weekRows(n),out=[],name={quality:"quality run",long:"long run",lift:"strength"};
+  for(var i=0;i<6;i++){var a=rows[i][3],b=rows[i+1][3];
+    if((a==="quality"||a==="long")&&(b==="quality"||b==="long"))out.push(rows[i][0]+" "+name[a]+" and "+rows[i+1][0]+" "+name[b]+" are back to back — two hard days in a row. Keep one of them easy.");
+    if(a==="lift"&&(b==="quality"||b==="long"))out.push("Strength on "+rows[i][0]+" is the day before your "+name[b]+" — expect heavy legs. Skip the squat top triple that week.");}
+  return out;}
+var arranging=false,picked=null;
+function sprintNote(n){
+  if(n<NEW_FROM)return "";
+  if(n<=4)return " With your friend: sprints can replace this session — 6–8 × 80–100 m at 85–90%, walking back between each. Never flat-out, never cold.";
+  if(n<=8)return " With your friend: do this session first, because it is the half-marathon work, then finish with 4–6 relaxed sprints at about 90%.";
+  if(n<RACE_WEEK)return " Finish with a few relaxed sprints.";
+  return " No sprints this week.";}
+
+const SCHED=[
+ ["Mon","Mobility","~40 min, routine below","mob","var(--green)","Mobility","routine below"],
+ ["Tue","Strength","one full-body session","lift","var(--amber)","Strength","bodyweight version in the card"],
+ ["Wed","Boxing","full session",null,"var(--ink2)","Shadowboxing","6–8 × 3-min rounds"],
+ ["Thu","Quality run","the hard one, with your friend","quality","var(--sky)","Quality run","runs go anywhere"],
+ ["Fri","Swim","easy, zero impact before Sunday","swim","var(--ink2)","Swim or easy run","hotel pool, or a gentle run"],
+ ["Sat","Boxing — light","technical only, long run tomorrow",null,"var(--ink2)","Shadowboxing","light, technical"],
+ ["Sun","Long run","with the group","long","var(--green)","Long run","runs go anywhere"]];
+
+// Mobility Mondays (and Saturday boxing) start in week 3; race week rests on Saturday.
+const MOB_FROM=3;
+function schedFor(n){var o=ovr(n);return SCHED.map(function(s){
+  if(o.sched&&o.sched[s[0]])return o.sched[s[0]];
+  if(n<MOB_FROM&&s[0]==="Mon")return ["Mon","Boxing — technical","lighter, day after the long run",null,"var(--ink2)"];
+  if(n<MOB_FROM&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
+  if(n<NEW_FROM&&s[0]==="Tue")return ["Tue","Quality run","the hard one","quality","var(--sky)"];
+  if(n<NEW_FROM&&s[0]==="Thu")return ["Thu","Strength","one full-body session","lift","var(--amber)"];
+  if(n>=6&&n<=8&&s[0]==="Sat")return ["Sat","Boxing — very light","skip it if Thursday left you flat",null,"var(--ink2)"];
+  if(n===RACE_WEEK&&s[0]==="Sat")return ["Sat","Rest","race tomorrow — feet up",null,"var(--ink4)"];
+  return s;});}
+
+// Monday mobility: [section, exercise, dose, cue, minutes, eccentric (dropped in race week)]
+const MOB=[
+ ["Breathe & loosen","Cat-cow into child's pose","10 slow reps, then 5 breaths","Move one segment of the spine at a time, then sit back into child's pose and breathe into your lower back.",2],
+ ["Roll it out","Foam roller: calves, quads, glutes","~4 min total","Slow passes, about 60 s per area. Pause on tender spots and breathe; it should ease, not hurt. Sit on the ball for the glutes if the roller isn't reaching.",4],
+ ["Hips & glutes","90/90 hip switches","2 × 8 each way","Sit tall on the mat, rotate both knees side to side slowly. Hands behind you for support if needed.",2],
+ ["Hips & glutes","Half-kneeling hip flexor stretch","2 × 45 s each side","Fold the mat under the back knee. Squeeze that glute and tuck the pelvis: you should feel the front of the hip, not the low back.",3],
+ ["Hips & glutes","Pigeon pose (or figure-4 lying down)","90 s each side","Deep glute stretch. Use figure-4 on your back if pigeon pinches the knee.",3],
+ ["Hips & glutes","Frog stretch","90 s","Inner thighs and groin. Rock gently forward and back; never force the depth.",2],
+ ["Hamstrings & low back","Lying hamstring stretch","2 × 45 s each leg","On your back, hands behind the thigh, straighten the knee until you feel the stretch. Keep the lower back flat. No strap needed.",3],
+ ["Hamstrings & low back","Supine twist","60 s each side","Knees drop to one side, both shoulders stay down. Easy on the low back.",2],
+ ["Hamstrings & low back","Bridge walkouts, slow","2 × 5","Bridge up, then walk the heels out in small steps until the legs are nearly straight, and walk back. Hips stay up. This is the hamstring-strain protection.",3,1],
+ ["Calves, achilles & feet","Wall calf stretch, straight knee","60 s each leg","Hands on the wall, back heel down, knee locked. The big calf muscle.",2],
+ ["Calves, achilles & feet","Wall calf stretch, bent knee","60 s each leg","Same position, back knee bent. Works the soleus, which runners usually neglect.",2],
+ ["Calves, achilles & feet","Slow calf lowers","2 × 10 each leg","Rise on both feet, lower on one over 3 s. Use a stair edge if you have one for extra range, otherwise flat floor.",3,1],
+ ["Calves, achilles & feet","Tibialis raises against a wall","2 × 15","Back to the wall, heels down, lift the toes. Shins and ankles.",2],
+ ["Calves, achilles & feet","Foot roll on a ball","60 s each foot","Ball under the arch. Slow and firm, never painful.",2],
+ ["End-range strength","Deep squat hold","3 × 30 s","Hold a door frame if you need to. Heels down, chest up.",2],
+ ["End-range strength","Adductor squeeze, foam roller","5 × 5 s","On your back, knees bent, foam roller across between the knees. Squeeze hard for 5 s, relax. No roller to hand? Stack both fists between the knees. Strengthens the groin against strains.",2],
+ ["Finish","Legs up the wall","2 min","Slow breathing on the mat. You're done when your breathing has settled.",2]];
+function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(S.week===RACE_WEEK&&x.m[5]);});}
+function mobHTML(){
+  if(S.week<MOB_FROM)return "";
+  var items=mobItems(),done=items.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length,
+      mins=items.reduce(function(a,x){return a+x.m[4];},0),open=S.mobOpen!==false,sec="";
+  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">'+((!moveMap(S.week)&&ovr(S.week).mobLabel)||mobDay(S.week))+' · Mobility</div>'+
+    '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div><div class="accstart">kit: yoga mat · foam roller · ball · a wall</div></div>'+
+    '<div class="rt" style="color:var(--green)">'+done+'<small>/'+items.length+'</small></div></div>'+
+    '<div class="bar"><div style="width:'+Math.round(done/items.length*100)+'%"></div></div>'+
+    '<div class="rnote">Stretch to about 4–5 out of 10, never into pain. Breathe out into each hold, no bouncing. If an area is freshly strained, skip it this week.'+
+    (S.week===RACE_WEEK?' <b>Race week:</b> the bridge walkouts and slow calf lowers are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
+    '<button class="copybtn" data-act="mobopen">'+(open?'Hide routine ▲':'Show routine ▼')+'</button>';
+  if(open){h+='<div class="moblist">';items.forEach(function(x){var m=x.m,on=!!S.mob[K()+":mob:"+x.i];
+      if(m[0]!==sec){sec=m[0];h+='<div class="lbl mobsec">'+esc(sec)+'</div>';}
+      h+='<div class="mobrow'+(on?' done':'')+'"><button class="chk '+(on?'on':'')+'" data-mob="'+x.i+'" aria-label="Mark '+esc(m[1])+' done">'+(on?'✓':'')+'</button>'+
+        '<div class="mobtxt"><div class="mobtop"><span class="mobname">'+esc(m[1])+'</span><span class="p">'+esc(m[2])+'</span></div>'+
+        '<div class="mobcue">'+esc(m[3])+'</div></div></div>';});
+    h+='</div>';}
+  return h+'</div>';}
+
+const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},ref:false,block:null,view:"new",oweek:8};
+try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
+S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
+S.mob=S.mob||{};S.moves=S.moves||{};
+if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
+function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
+
+function dOnly(d){d.setHours(0,0,0,0);return d;}
+function weekStart(n){var d=new Date(START+"T00:00:00");d.setDate(d.getDate()+(n-1)*7);return d;}
+function fmtD(d){return d.getDate()+" "+MON[d.getMonth()];}
+function weekRange(n){var a=weekStart(n),b=new Date(a);b.setDate(b.getDate()+6);return fmtD(a)+" – "+fmtD(b);}
+function daysToRace(){return Math.round((new Date(RACE.date+"T00:00:00")-dOnly(new Date()))/86400000);}
+function currentWeek(){
+  var diff=Math.floor((dOnly(new Date())-new Date(START+"T00:00:00"))/86400000);
+  return Math.min(Math.max(Math.floor(diff/7)+1,1),WEEKS.length);
+}
+function todayDay(){return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
+// New block: reset the selected week, keep every old log for export.
+if(S.block!==BLOCK){S.block=BLOCK;S.week=currentWeek();S.shift28=true;persist();}
+// During the haze the dates briefly ran from 21 Sep, and logs from 11 Oct were entered one week tab ahead.
+// With the block back on 28 Sep, everything from week 3 on moves back one week (week 3 merges into week 2,
+// where week 2's own entries win). Runs once; the previous data is kept for Undo.
+function shiftBackOneWeek(){
+  var moved=0;
+  var blockKey=function(k){if(k.indexOf(BLOCK)!==0)return null;var m=k.slice(BLOCK.length).match(/^(\d+)(:.*)$/);
+    return (m&&+m[1]>=3)?BLOCK+(+m[1]-1)+m[2]:null;};
+  var runKey=function(k){var m=k.match(/^(\d+)(:.*)$/);return (m&&+m[1]>=3)?(+m[1]-1)+m[2]:null;};
+  var weekKey=function(k){return /^\d+$/.test(k)&&+k>=3?String(+k-1):null;};
+  var apply=function(obj,fn){var out={},later=[];
+    Object.keys(obj).forEach(function(k){var nk=fn(k);if(nk===null)out[k]=obj[k];else later.push([nk,obj[k]]);});
+    later.forEach(function(p){if(!(p[0] in out)){out[p[0]]=p[1];moved++;}});return out;};
+  S.logs=apply(S.logs,blockKey);S.sessions=apply(S.sessions,blockKey);S.mob=apply(S.mob,blockKey);
+  S.travel=apply(S.travel,blockKey);S.runs=apply(S.runs,runKey);S.moves=apply(S.moves,weekKey);
+  return moved;}
+if(!S.shift28){
+  try{localStorage.setItem("ss_state_before_shift28",JSON.stringify(S));}catch(e){}
+  var nMoved=shiftBackOneWeek();S.shift28=true;S.week=currentWeek();if(nMoved)S.shiftNote=nMoved;persist();}
+function undoShift(){try{var r=localStorage.getItem("ss_state_before_shift28");if(!r)return false;
+  S=Object.assign(S,JSON.parse(r));S.shift28=true;delete S.shiftNote;S.week=currentWeek()+1;persist();return true;}catch(e){return false;}}
+
+const r25=v=>Math.round(v/2.5)*2.5;
+const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1);
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function ramp(W){if(!W)return[];const out=["bar × 8"];let last=20;[[0.5,5],[0.7,3],[0.85,2]].forEach(function(s){const x=r25(W*s[0]);if(x>20&&x<W&&x!==last){out.push(fmt(x)+" × "+s[1]);last=x;}});return out;}
+function parseSets(p){var m=String(p).match(/^\s*(\d+)\s*sets?/i);return m?+m[1]:1;}
+function parseReps(p){var m=String(p).match(/[×x]\s*(\d+)/);return m?+m[1]:0;}
+const K=()=>S.view==="old"?String(S.oweek):BLOCK+S.week;
+function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
+function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(m.fixed!=null?m.fixed:(w.pct+(m.adj||0)))):0;}
+function liftTop(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return (rm&&m.top)?r25(rm*(w.pct+m.topAdj)):0;}
+function bigW(m){return m.top?liftTop(m):liftW(m);}
+function pctStr(p){return Math.round(p*100)+"%";}
+function liftSpec(m){var w=WEEKS[S.week-1],n=w.sets;
+  if(m.top){var bo=Math.max(n-1,0);return "Top 1 × "+m.top+" @ "+pctStr(w.pct+m.topAdj)+(bo?" · then "+bo+" × "+m.reps+" @ "+pctStr(w.pct):"");}
+  return n+" × "+m.reps+" @ "+pctStr(m.fixed!=null?m.fixed:w.pct+(m.adj||0));}
+
+// ---- Previous block (12-week Strength System): read-only view of the old logs ----
+const OLD_LIFTS={squat:"Back squat",bench:"Bench press",deadlift:"Deadlift",ohp:"Overhead press"};
+const OLD_DAY={squat:"Thu",bench:"Thu",deadlift:"Tue",ohp:"Tue"};
+const OLD_ACC={
+ Thu:["Chin-up or lat pulldown","Face pulls","Rear-delt raise","Pallof press","Ab wheel / hanging knee raise"],
+ Tue:["Barbell row","Bulgarian split squat (paused)","Cuff external rotation","Pull-up","Single-arm suitcase carry","Hanging knee raise"]};
+function isLegacyKey(key){return key.indexOf(BLOCK)!==0;}
+function legacyLabel(key){
+  var m=key.match(/^(\d+):acc:(\w+):(\d+)$/);
+  if(m){var list=OLD_ACC[m[2]]||[];return{week:+m[1],day:m[2],name:list[+m[3]]||("Accessory "+(+m[3]+1)),acc:true};}
+  m=key.match(/^(\d+):(squat|bench|deadlift|ohp)$/);
+  if(m)return{week:+m[1],day:OLD_DAY[m[2]],name:OLD_LIFTS[m[2]],acc:false};
+  return null;
+}
+function legacyWeeks(){
+  var byWeek={};
+  Object.keys(S.logs).forEach(function(key){
+    if(!isLegacyKey(key))return;
+    var L=legacyLabel(key);if(!L)return;
+    var sets=(S.logs[key]||{}).sets||[],parts=[];
+    sets.forEach(function(st){var x=fmtSet(st||{});if(x)parts.push(x);});
+    if(!parts.length)return;
+    (byWeek[L.week]=byWeek[L.week]||[]).push({day:L.day,name:L.name,acc:L.acc,sets:parts.join(", ")});
+  });
+  return Object.keys(byWeek).map(Number).sort(function(a,b){return a-b;}).map(function(wk){
+    var items=byWeek[wk].sort(function(a,b){return a.day===b.day?(a.acc-b.acc):(a.day==="Tue"?-1:1);});
+    return{week:wk,items:items};});
+}
+function oldDayName(d){return d+(d==="Tue"?" · Deadlift day":" · Squat day");}
+function legacyText(){
+  var wks=legacyWeeks();if(!wks.length)return "";
+  var out="PREVIOUS BLOCK — Strength System (12-week)";
+  wks.forEach(function(w){out+="\n\nWeek "+w.week;var day="";
+    w.items.forEach(function(it){if(it.day!==day){day=it.day;out+="\n  "+oldDayName(day);}out+="\n    "+it.name+": "+it.sets;});});
+  return out;
+}
+// The previous program, so its weeks can be tabbed back to and its logs edited in place.
+const OLD_WEEKS=[
+ {n:1,phase:"Build",pct:.675},{n:2,phase:"Build",pct:.70},{n:3,phase:"Build",pct:.725},
+ {n:4,phase:"Deload",pct:.60},{n:5,phase:"Strength",pct:.75},{n:6,phase:"Strength",pct:.775},
+ {n:7,phase:"Strength",pct:.80},{n:8,phase:"Deload",pct:.65},{n:9,phase:"Peak",pct:.825},
+ {n:10,phase:"Peak",pct:.85},{n:11,phase:"Peak",pct:.875},{n:12,phase:"Retest",pct:.80}];
+const OLD_PHASE={Build:"#a3a3a3",Strength:"var(--amber)",Peak:"var(--red)",Deload:"var(--green)",Retest:"var(--red)"};
+const _n="";
+const OLD_PROG={
+ squat:{name:"Back squat",rm:"squat",fallback:"Goblet or Bulgarian split squat — 3 × 10–12 / leg @ RPE 8",
+   sr:["4 × 6","4 × 6","4 × 5","3 × 5","4 × 4","4 × 4","4 × 3","3 × 4","3 × 3","3 × 2","Top 2","3×3 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Technique focus. Crisp.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 5 back-off @ 72.5%","New top single/triple if good, then update your max. Else 3×3."]},
+ bench:{name:"Bench press",rm:"bench",fallback:"Push-ups or DB floor press — 3 sets, stop 2 reps short @ RPE 8",
+   sr:["3 × 8","3 × 8","3 × 6","3 × 6","4 × 5","4 × 5","4 × 4","3 × 5","4 × 4","4 × 3","Top 3","3×4 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Technique focus.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 6 back-off @ 72.5%","New top triple if good, then update your max. Else 3×4."]},
+ deadlift:{name:"Deadlift",rm:"deadlift",fallback:"DB Romanian or single-leg RDL — 3 × 10–12 @ RPE 8",
+   sr:["3 × 5","3 × 5","3 × 4","2 × 5","3 × 3","3 × 3","3 × 3","2 × 4","2 × 3","2 × 2","Top 2","2×3 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Low volume by design.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 3 back-off @ 75%","New top single/double if good, then update your max. Else 2×3."]},
+ ohp:{name:"Overhead press",rm:"ohp",fallback:"Pike push-up or DB shoulder press — 3 × 8–12 @ RPE 8",
+   sr:["3 × 8","3 × 8","3 × 6","3 × 6","4 × 5","4 × 5","4 × 4","3 × 5","4 × 4","4 × 3","Top 3","3×4 / test"],
+   rpe:["7","7","8","5–6","8","8","8","5–6","8–9","9","9","9"],
+   note:["Technique focus.",_n,_n,"Deload. Keep it light.",_n,_n,_n,"Deload. Keep it light.",_n,_n,"Then 1 × 6 back-off @ 72.5%","New top triple if good, then update your max. Else 3×4."]}};
+const OLD_ACC_FULL={
+ Thu:[["Chin-up or lat pulldown","3 sets × 6–10 reps","BW / ~45kg pulldown"],["Face pulls","3 sets × 12–15 reps","~15–20kg or band"],["Rear-delt raise","2 sets × 12–15 reps","4–6kg"],["Pallof press","3 sets × 10 reps each side","~10–15kg or band"],["Ab wheel / hanging knee raise","3 sets × 8–15 reps","BW"]],
+ Tue:[["Barbell row","3 sets × 6–10 reps","~40kg"],["Bulgarian split squat (paused)","3 sets × 8–10 reps each leg","BW–2×10kg"],["Cuff external rotation","2 sets × 12–15 reps","2–4kg or band"],["Pull-up","3 sets × 5–10 reps","BW · band-assist or +load to fit reps"],["Single-arm suitcase carry","3 sets × 30 m each side","16–24kg"],["Hanging knee raise","3 sets × 10–15 reps","BW · add a dumbbell between the feet when 15 is easy"]]};
+const OLD_DAYS={Tue:{title:"Deadlift",mains:["deadlift","ohp"],swap:"Travel swap: backpack RDLs, suitcase carries, band pull-aparts."},
+                Thu:{title:"Squat",mains:["squat","bench"],swap:"Travel swap: backpack rows, band or towel face pulls, planks."}};
+const OLD_SCHED=[
+ ["Mon","Boxing — technical","lighter, day after the run","Shadowboxing","6–8 × 3-min rounds","var(--ink2)"],
+ ["Tue","Lift B","deadlift day","Lift B","deadlift — travel option in card","var(--amber)"],
+ ["Wed","Boxing","","Shadowboxing","6–8 × 3-min rounds","var(--ink2)"],
+ ["Thu","Lift A","squat day","Lift A","squat — travel option in card","var(--amber)"],
+ ["Fri","HIIT / crossfit","your hard one","Bodyweight circuit","5 rounds, hard","var(--ink2)"],
+ ["Sat","Rest","","Rest","","var(--ink4)"],
+ ["Sun","Hard run","evening, with the group","Run, easy","keep it aerobic","var(--green)"]];
+function parseSR(sr){var ns=sr.match(/^\s*(\d+)\s*sets?/i);if(ns){var rp=sr.match(/[×x]\s*(\d+)/);return{sets:+ns[1],reps:rp?+rp[1]:0};}var mx=sr.match(/(\d+)\s*[×x]\s*(\d+)/);if(mx)return{sets:+mx[1],reps:+mx[2]};var top=sr.match(/[Tt]op\s*(\d+)/);if(top)return{sets:1,reps:+top[1]};return{sets:1,reps:0};}
+function oldW(k){var L=OLD_PROG[k],w=OLD_WEEKS[S.oweek-1],rm=Number(S.oneRMs[L.rm]);return rm?r25(rm*w.pct):0;}
+function oldWeekHasLogs(n){var p=n+":";return Object.keys(S.logs).some(function(k){return k.indexOf(p)===0&&((S.logs[k]||{}).sets||[]).some(function(st){return st&&fmtSet(st);});});}
+function setRows(key,n,ph,reps){var wl=(S.logs[key]||{}).sets||[],rows="";
+  for(var si=0;si<n;si++){var st=wl[si]||{};
+    rows+='<div class="logrow"><span class="setn">Set '+(si+1)+'</span><input inputmode="decimal" placeholder="'+ph+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+(reps||'reps')+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
+  return rows;}
+function oldMainHTML(k,trav){
+  var L=OLD_PROG[k],w=OLD_WEEKS[S.oweek-1],i=S.oweek-1,W=oldW(k),pr=parseSR(L.sr[i]),key=S.oweek+":"+k,note=L.note[i],peak=(w.phase==="Peak"||w.phase==="Retest");
+  return '<div class="main"><div class="mtop"><div><div class="mname">'+L.name+'</div>'+
+    '<div class="mspec">'+L.sr[i]+' · '+Math.round(w.pct*100)+'% · RPE '+L.rpe[i]+'</div></div>'+
+    '<div><div class="wt'+(peak?' peak':'')+'" id="wt-'+k+'">'+(W?fmt(W):'—')+'</div><div class="unit">kg</div></div></div>'+
+    (note?'<div class="mnote">'+esc(note)+'</div>':'')+
+    ((W&&!trav)?'<div class="ramp">Ramp: '+ramp(W).join("  →  ")+'  →  <b>work</b></div>':'')+
+    (trav?'<div class="fallback"><b>Barbell if available.</b> Otherwise: '+esc(L.fallback)+'</div>':'')+
+    setRows(key,pr.sets,W?fmt(W):'kg',pr.reps)+'</div>';}
+function oldDayHTML(day){
+  var p=OLD_DAYS[day],trav=false;
+  var power=(day==="Thu")?'<div class="power"><div class="powerh">Power — do first</div><div class="powerm">Rotational throw · 4 × 3 / side</div><div class="powers">Explosive, full rest. Med ball 3–5 kg into a wall, or a band anchored at chest height.</div></div>':'';
+  return '<div class="day"><div class="dhead">'+day+' · '+p.title+'</div>'+
+    '<div class="warm"><div class="warmh">Warm-up first</div><div class="warmi"><b>1.</b> McGill Big 3 — curl-up, side plank, bird dog</div><div class="warmi"><b>2.</b> Ramp each lift to its working weight</div></div>'+power+
+    p.mains.map(function(k){return oldMainHTML(k,trav);}).join("")+
+    '<div class="acc"><div class="lbl">Accessories</div><ul>'+OLD_ACC_FULL[day].map(function(a,idx){
+      var pr=parseSR(a[1]);return '<li><div class="acctop"><span>'+esc(a[0])+'</span><span class="p">'+esc(a[1])+'</span></div>'+(a[2]?'<div class="accstart">start '+esc(a[2])+'</div>':'')+setRows(S.oweek+":acc:"+day+":"+idx,pr.sets,'kg',pr.reps)+'</li>';}).join("")+'</ul></div></div>';}
+function oldSessionText(){
+  var w=OLD_WEEKS[S.oweek-1],out="Strength System · Week "+S.oweek+" of 12 · "+w.phase;
+  ["Tue","Thu"].forEach(function(day){var p=OLD_DAYS[day];out+="\n\n"+day.toUpperCase()+" · "+p.title.toUpperCase();
+    p.mains.forEach(function(k){var L=OLD_PROG[k],i=S.oweek-1,W=oldW(k),sets=(S.logs[S.oweek+":"+k]||{}).sets||[],parts=[];
+      sets.forEach(function(st){var x=fmtSet(st||{});if(x)parts.push(x);});
+      out+="\n  "+L.name+" — "+L.sr[i]+" · "+Math.round(w.pct*100)+"% · RPE "+L.rpe[i]+(W?" · "+fmt(W)+"kg":"")+"\n    logged: "+(parts.length?parts.join(", "):"—");});
+    OLD_ACC_FULL[day].forEach(function(a,idx){var sets=(S.logs[S.oweek+":acc:"+day+":"+idx]||{}).sets||[],parts=[];
+      sets.forEach(function(st){var x=fmtSet(st||{});if(x)parts.push(x);});
+      if(parts.length)out+="\n  "+a[0]+": "+parts.join(", ");});});
+  return out;}
+
+// ---- rewards: everything clocked in, across both blocks ----
+function num(v){var n=parseFloat(String(v==null?"":v).replace(",","."));return isNaN(n)?0:n;}
+function stats(){
+  var st={sessions:0,runs:0,km:0,longest:0,swims:0,swimM:0,sets:0,kg:0,lifts:0,streak:0,best:0,mobility:0};
+  Object.keys(S.sessions).forEach(function(k){if(S.sessions[k])st.sessions++;});
+  Object.keys(S.runs).forEach(function(k){var r=S.runs[k]||{};if(!(r.km||r.t))return;
+    if(/:swim$/.test(k)){st.swims++;st.swimM+=num(r.km);}else{st.runs++;var d=num(r.km);st.km+=d;if(/:long$/.test(k)&&d>st.longest)st.longest=d;}});
+  var liftKeys={};
+  Object.keys(S.logs).forEach(function(k){var sets=(S.logs[k]||{}).sets||[];sets.forEach(function(x){if(!x||!fmtSet(x))return;st.sets++;var w=num(x.w),r=num(x.r);if(w&&r)st.kg+=w*r;
+    var wk=k.indexOf(BLOCK)===0?BLOCK+k.slice(BLOCK.length).split(":")[0]:k.split(":")[0];liftKeys[wk]=1;});});
+  st.lifts=Object.keys(liftKeys).length;
+  // a mobility session counts once 75% of that week's routine is ticked
+  st.mobility=WEEKS.filter(function(w){if(w.n<MOB_FROM)return false;var n=0,c=0;
+    MOB.forEach(function(m,i){if(w.n===RACE_WEEK&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
+  // a week "counts" with 4+ sessions ticked; streak = consecutive counted weeks ending at the latest one
+  var done=function(pre){return SCHED.filter(function(x){return !!S.sessions[pre+x[0]];}).length>=4;};
+  var seq=OLD_WEEKS.map(function(w){return done(w.n+":");}).concat(WEEKS.map(function(w){return done(BLOCK+w.n+":");}));
+  var run=0;seq.forEach(function(d){run=d?run+1:0;if(run>st.best)st.best=run;});
+  var cw=currentWeek(),i=OLD_WEEKS.length+cw-1;if(!seq[i])i--;      // this week may still be in progress
+  while(i>=0&&seq[i]){st.streak++;i--;}
+  return st;}
+const BADGES=[
+ ["First one in the book","sessions",1],["Ten sessions","sessions",10],["Twenty-five sessions","sessions",25],["Fifty sessions","sessions",50],["A hundred sessions","sessions",100],
+ ["Three-week streak","best",3],["Six-week streak","best",6],["Ten-week streak","best",10],
+ ["50 km run","km",50],["100 km run","km",100],["200 km run","km",200],
+ ["Long run 15 km+","longest",15],["Long run 19 km — peak","longest",19],["21.1 km — the half","longest",21.1],
+ ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — "+(RACE_WEEK-MOB_FROM+1)+" sessions","mobility",RACE_WEEK-MOB_FROM+1],
+ ["10 tonnes lifted","kg",10000],["25 tonnes lifted","kg",25000],["50 tonnes lifted","kg",50000]];
+function fmtBig(v,k){return k==="kg"?(v>=1000?(Math.round(v/100)/10)+" t":Math.round(v)+" kg"):k==="km"||k==="longest"?(Math.round(v*10)/10)+" km":String(v);}
+function rewardHTML(){
+  var st=stats(),earned=[],next=null;
+  BADGES.forEach(function(b){if(st[b[1]]>=b[2])earned.push(b);else if(!next||(b[2]-st[b[1]])/b[2]<(next[2]-st[next[1]])/next[2])next=b;});
+  if(!st.sessions&&!st.runs&&!st.sets)return "";
+  var tile=function(v,l){return '<div class="rt2"><div class="rv">'+v+'</div><div class="rl">'+l+'</div></div>';};
+  return '<div class="card rew"><div class="lbl">Clocked in · both blocks</div>'+
+    '<div class="rgrid">'+tile(st.sessions,"sessions")+tile(st.streak+(st.best>st.streak?'<small>/'+st.best+'</small>':''),"week streak")+
+    tile(Math.round(st.km),"km run")+tile(st.kg>=1000?(Math.round(st.kg/100)/10)+"t":Math.round(st.kg),"kg lifted")+'</div>'+
+    '<div class="rsub">'+st.runs+' runs · longest '+fmtBig(st.longest,"km")+' · '+st.lifts+' lift days · '+st.sets+' sets'+(st.swims?' · '+st.swims+' swims':'')+(st.mobility?' · '+st.mobility+' mobility':'')+'</div>'+
+    (earned.length?'<div class="badges">'+earned.map(function(b){return '<span class="badge2">✓ '+b[0]+'</span>';}).join("")+'</div>':'')+
+    (next?'<div class="nextb"><span>Next: <b>'+next[0]+'</b></span><span class="p">'+fmtBig(st[next[1]],next[1])+' / '+fmtBig(next[2],next[1])+'</span></div>'+
+      '<div class="bar"><div style="width:'+Math.min(100,Math.round(st[next[1]]/next[2]*100))+'%"></div></div>':'')+'</div>';}
+
+// ---- shared pieces ----
+function maxesHTML(note){
+  return '<div class="card"><div class="lbl">Your current 1RM · the lift day recalculates</div>'+
+  '<div class="maxes">'+[["squat","Squat"],["bench","Bench"],["deadlift","Dead"],["ohp","OHP"]].map(function(m){
+    return '<label><span>'+m[1]+'</span><input inputmode="decimal" data-rm="'+m[0]+'" value="'+(S.oneRMs[m[0]]==null?'':S.oneRMs[m[0]])+'"></label>';}).join("")+
+  '</div><div class="accnote">'+note+'</div></div>';}
+function stripHTML(){
+  var old=OLD_WEEKS.map(function(wk){var a=S.view==="old"&&wk.n===S.oweek,has=oldWeekHasLogs(wk.n);
+    return '<button class="wk old '+(a?'active':'')+'" data-oweek="'+wk.n+'" title="Strength block · week '+wk.n+'"><span>'+wk.n+'</span>'+
+      '<span class="dot" style="background:'+(a?'#0a0a0a':(has?OLD_PHASE[wk.phase]:'#2a2a2a'))+'"></span></button>';}).join("");
+  var cur=WEEKS.map(function(wk){var a=S.view==="new"&&wk.n===S.week;
+    return '<button class="wk '+(a?'active':'')+' '+(wk.n===currentWeek()?'now':'')+'" data-week="'+wk.n+'"><span>'+wk.n+'</span>'+
+      '<span class="dot" style="background:'+(a?'#0a0a0a':PHASE[wk.phase])+'"></span></button>';}).join("");
+  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 28 Sep">»</div>'+cur+'</div>';}
+function schedHTML(rows,pre,isNow,td,raceSun){
+  return '<div class="sched">'+rows.map(function(s){
+    var d=s[0],src=s[6]||d,done=!!S.sessions[pre+src],label=s[1],sub=s[2],fixed=raceSun&&src==="Sun";
+    if(fixed){label="RACE — 21.1 km";sub="you have done the work";}
+    var tag=src!==d?'<span class="mvtag">from '+src+'</span>':'';if(src!==d)sub="";   // its note was written for the original day
+    if(arranging)return '<button class="srow arr'+(picked===d?' pick':'')+(fixed?' fixed':'')+'" '+(fixed?'disabled':'data-pick="'+d+'"')+'>'+
+      '<span class="grip">'+(fixed?'•':'⇅')+'</span><span class="d">'+d+'</span><span class="a" style="color:'+s[5]+'">'+label+'</span>'+tag+'</button>';
+    return '<div class="srow '+(done?'done':'')+' '+((isNow&&d===td)?'today':'')+'">'+
+      '<button class="chk '+(done?'on':'')+'" data-sess="'+src+'" aria-label="Mark '+d+' done">'+(done?'✓':'')+'</button>'+
+      '<span class="d">'+d+'</span><span class="a" style="color:'+s[5]+'">'+label+'</span>'+(sub?'<span class="s">'+sub+'</span>':'')+tag+'</div>';}).join("")+'</div>';}
+function footerHTML(){
+  return '<div class="btnrow"><button class="reset" data-act="reset">Reset logs</button>'+
+  '<button class="reset" data-act="copyall" data-lbl="Copy full log">Copy full log</button>'+
+  (S.view==="new"?'<button class="reset" data-act="move">Move this week\'s logs…</button>':'')+'</div>'+
+  '<div class="btnrow"><button class="reset" data-act="export" data-lbl="Download CSV">Download CSV</button>'+
+  '<button class="reset" data-act="import">Import CSV</button></div>'+
+  '<input type="file" id="csvfile" accept=".csv,text/csv" style="display:none">'+
+  '<div class="foot">The smarter you get, the stronger you get</div>';}
+function scrollStrip(){var st=document.getElementById("strip"),a=st&&st.querySelector(".wk.active");if(st&&a)st.scrollLeft=Math.max(0,a.offsetLeft-st.clientWidth/2+a.offsetWidth/2);}
+
+// Move every log, run, checkmark and travel flag of one half-marathon week to another.
+function moveWeek(from,to){
+  var mv=function(obj,pf,pt){var out={};Object.keys(obj).forEach(function(k){
+    if(k.indexOf(pt)===0)return;             // target's old data is dropped (caller confirmed)
+    out[k.indexOf(pf)===0?pt+k.slice(pf.length):k]=obj[k];});return out;};
+  S.logs=mv(S.logs,BLOCK+from+":",BLOCK+to+":");S.sessions=mv(S.sessions,BLOCK+from+":",BLOCK+to+":");
+  S.travel=mv(S.travel,BLOCK+from+":",BLOCK+to+":");S.mob=mv(S.mob,BLOCK+from+":",BLOCK+to+":");
+  var mf=S.moves[from];delete S.moves[to];if(mf){S.moves[to]=mf;delete S.moves[from];}S.runs=mv(S.runs,from+":",to+":");
+  S.week=to;persist();render();}
+function weekHasData(n){var a=BLOCK+n+":",b=n+":";
+  return Object.keys(S.logs).some(function(k){return k.indexOf(a)===0&&((S.logs[k]||{}).sets||[]).some(function(st){return st&&fmtSet(st);});})||
+         Object.keys(S.runs).some(function(k){return k.indexOf(b)===0&&(S.runs[k].km||S.runs[k].t);})||
+         Object.keys(S.sessions).some(function(k){return k.indexOf(a)===0;})||
+         Object.keys(S.mob).some(function(k){return k.indexOf(a)===0;});}
+
+function renderOld(){
+  var w=OLD_WEEKS[S.oweek-1],pre=S.oweek+":";
+  var doneCount=OLD_SCHED.filter(function(s){return !!S.sessions[pre+s[0]];}).length;
+  document.getElementById("app").innerHTML=
+  '<div class="eyebrow" style="color:var(--amber)">Previous block · Strength System</div>'+
+  '<h1>The Block</h1>'+
+  '<p class="lead">Twelve-week strength block. You completed week 8, then the program changed.</p>'+
+  '<div class="obanner"><b>You are looking back.</b> These are the weeks before the half-marathon block started on 28 Sep. Everything here is still yours to edit. Targets recalculate from whatever maxes are entered above — your logged sets are what you actually lifted. Tap » in the strip to return to the current program.</div>'+
+  rewardHTML()+
+  maxesHTML("Set these to what they were at the time if you want the old targets to read as they did.")+
+  stripHTML()+
+  '<div class="wkhead"><div><b>Week '+S.oweek+'</b> <span class="hint">of 12</span>'+
+  '<span class="badge" style="color:'+OLD_PHASE[w.phase]+';border-color:'+OLD_PHASE[w.phase]+'">'+w.phase+'</span>'+
+  (doneCount?'<span class="donecount">'+doneCount+' done</span>':'')+'</div>'+
+  '<span class="hint">tap ✓ when done</span></div>'+
+  schedHTML(OLD_SCHED,pre,false,"",false)+
+  oldDayHTML("Tue")+oldDayHTML("Thu")+
+  '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
+  footerHTML();
+  scrollStrip();}
+
+// ---------- session + full log text ----------
+function runLine(slot,label,target,unit,wk){
+  var lg=S.runs[(wk||S.week)+":"+slot]||{},bits=[];
+  if(lg.km)bits.push(lg.km+" "+(unit||"km"));if(lg.t)bits.push(lg.t);
+  return "\n  "+label+" — target "+target+(bits.length?" · logged "+bits.join(" / "):"");
+}
+function sessionText(){
+  var w=WEEKS[S.week-1];
+  var out="Week "+S.week+" of "+WEEKS.length+" · "+w.phase+" · "+weekRange(S.week);
+  out+="\n"+daysToRace()+" days to "+RACE.event;
+  out+="\n\nRUNS";
+  var xl=ovr(S.week).extraLong;if(xl)out+=runLine("long",xl.day+" · Long run (moved from week "+xl.from+" Sun, haze; only if PSI is OK)",WEEKS[xl.from-1].long+" km",null,xl.from);
+  out+=runLine("long",(S.week===RACE_WEEK?"Sun · RACE":longDay(S.week)+" · Long run"),w.long+" km");
+  if(qDay(S.week))out+=runLine("quality",qDay(S.week)+" · "+w.q.n+" ("+w.q.s+")","quality");else out+="\n  No quality run this week";
+  out+=runLine("swim",dispDay(S.week,"Fri")+" · Swim",(S.week===RACE_WEEK?"15":"20–30")+" min easy","m");
+  if(S.week>=MOB_FROM){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
+    out+="\n\nMOBILITY ("+mobDay(S.week)+")\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
+  if(ovr(S.week).sched||moveMap(S.week))out+="\n\nTHIS WEEK ("+(moveMap(S.week)?"days moved":"rescheduled for haze")+")"+weekRows(S.week).map(function(s){return "\n  "+s[0]+" · "+s[1]+(s[5]!==s[0]?" (from "+s[5]+")":(s[2]?" — "+s[2]:""));}).join("");
+  else out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===RACE_WEEK)?"":"\n  Sat · light and technical — long run tomorrow");
+  out+="\n\nSTRENGTH ("+liftDay(S.week)+")";
+  mainsFor(S.week).forEach(function(m){
+    var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
+    sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
+    out+="\n  "+m.name+" — "+liftSpec(m)+(B?" · "+fmt(B)+"kg"+(m.top?" top":""):"");
+    out+="\n    logged: "+(parts.length?parts.join(", "):"—");});
+  out+="\n\nACCESSORIES";
+  accFor(S.week).forEach(function(a,idx){
+    var lg=S.logs[K()+":acc:"+idx]||{},sets=lg.sets||[],parts=[];
+    sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
+    out+="\n  "+a[0]+" — "+a[1]+(parts.length?" · "+parts.join(", "):(a[2]?" (start "+a[2]+")":""));});
+  return out;
+}
+function fullLogText(){
+  var out="Half Marathon Block — training log",found=false;
+  for(var wk=1;wk<=WEEKS.length;wk++){
+    var W=WEEKS[wk-1],ln="";
+    [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"]].forEach(function(s){
+      var lg=S.runs[wk+":"+s[0]]||{},bits=[];
+      if(lg.km)bits.push(lg.km+(s[0]==="swim"?" m":" km"));if(lg.t)bits.push(lg.t);
+      if(bits.length)ln+="\n    "+s[1]+": "+bits.join(" / ");});
+    mainsFor(wk).forEach(function(m){
+      var lg=S.logs[BLOCK+wk+":"+m.k]||{},sets=lg.sets||[],parts=[];
+      sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
+      if(parts.length)ln+="\n    "+m.name+": "+parts.join(", ");});
+    accFor(wk).forEach(function(a,idx){
+      var lg=S.logs[BLOCK+wk+":acc:"+idx]||{},sets=lg.sets||[],parts=[];
+      sets.forEach(function(st){var s=fmtSet(st);if(s)parts.push(s);});
+      if(parts.length)ln+="\n    "+a[0]+": "+parts.join(", ");});
+    if(ln){found=true;out+="\n\nWeek "+wk+" · "+W.phase+" · "+weekRange(wk)+ln;}
+  }
+  var lt=legacyText();if(lt){out+="\n\n"+lt;found=true;}
+  return found?out:"Nothing logged yet.";
+}
+function flash(btn){if(!btn)return;var t=btn.getAttribute("data-lbl")||btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=t;},1200);}
+function copyText(txt,btn){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){flash(btn);},function(){window.prompt("Copy your log:",txt);});}else{window.prompt("Copy your log:",txt);}}catch(e){window.prompt("Copy your log:",txt);}}
+
+// ---------- CSV ----------
+const RM_NAMES=[["squat","Back squat"],["bench","Bench press"],["deadlift","Deadlift"],["ohp","Overhead press"]];
+function csvCell(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function buildCSV(){
+  var rows=[["Category","Week","Day","Item","Set","Weight","Reps","Distance","Time","Done","Key"]];
+  rows.push(["Meta","","","dates fixed (28 Sep)","","","","","","","shift28"]);
+  RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
+  for(var wk=1;wk<=WEEKS.length;wk++){
+    [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim",dispDay(wk,"Fri")]].forEach(function(s){
+      var key=wk+":"+s[0],lg=S.runs[key]||{};
+      if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push([s[0]==="swim"?"Swim":"Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
+    mainsFor(wk).forEach(function(m){
+      var key=BLOCK+wk+":"+m.k,sets=(S.logs[key]||{}).sets||[];
+      sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Lift",wk,liftDay(wk),m.name,si+1,st.w||"",st.r||"","","","",key]);});});
+    accFor(wk).forEach(function(a,idx){
+      var key=BLOCK+wk+":acc:"+idx,sets=(S.logs[key]||{}).sets||[];
+      sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Accessory",wk,liftDay(wk),a[0],si+1,st.w||"",st.r||"","","","",key]);});});
+  }
+  Object.keys(S.sessions).forEach(function(key){if(S.sessions[key])rows.push(["Session","","","","","","","","","yes",key]);});
+  Object.keys(S.mob).forEach(function(key){if(!S.mob[key])return;var p=key.slice(BLOCK.length).split(":"),it=MOB[+p[2]];
+    rows.push(["Mobility",p[0],mobDay(+p[0]),it?it[1]:"","","","","","","yes",key]);});
+  Object.keys(S.moves).forEach(function(wk){var m=S.moves[wk]||{};DAYS7.forEach(function(d){if(m[d]&&m[d]!==d)rows.push(["Move",wk,d,m[d],"","","","","","",wk+":"+d]);});});
+  // Anything logged in an earlier block stays exportable.
+  Object.keys(S.logs).forEach(function(key){
+    if(key.indexOf(BLOCK)===0)return;
+    var sets=(S.logs[key]||{}).sets||[];
+    sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!==""))){var L=legacyLabel(key)||{};rows.push(["Legacy",L.week||"",L.day||"",L.name||"",si+1,st.w||"",st.r||"","","","",key]);}});});
+  return rows.map(function(r){return r.map(csvCell).join(",");}).join("\n");
+}
+function downloadCSV(btn){
+  try{
+    var blob=new Blob([buildCSV()],{type:"text/csv;charset=utf-8"});
+    var url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download="half-marathon-log.csv";document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},0);
+    flash(btn);
+  }catch(e){alert("Could not download. Try Copy full log instead.");}
+}
+function parseCSV(text){
+  var rows=[],row=[],cur="",i=0,inQ=false,c;text=String(text).replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  while(i<text.length){c=text[i];
+    if(inQ){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=c;}
+    else{if(c==='"')inQ=true;else if(c===",")row.push(cur),cur="";else if(c==="\n"){row.push(cur);rows.push(row);row=[];cur="";}else cur+=c;}
+    i++;}
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+function importCSV(text){
+  var rows=parseCSV(text);if(!rows.length)return false;
+  var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
+  ["category","week","day","item","set","weight","reps","distance","time","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
+  if(ci.category<0||ci.key<0)return false;
+  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nRMs=Object.assign({},S.oneRMs),fixed=false;
+  var g=function(r,n){return ci[n]>=0?(r[ci[n]]||"").trim():"";};
+  for(var i=1;i<rows.length;i++){
+    var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
+    var cat=g(r,"category"),key=g(r,"key"),wt=g(r,"weight"),rp=g(r,"reps");
+    if(cat==="Max"){if(key)nRMs[key]=wt===""?"":Number(wt);}
+    else if(cat==="Run"||cat==="Swim"){if(!key)continue;var km=g(r,"distance"),tm=g(r,"time");nRuns[key]=nRuns[key]||{};if(km!=="")nRuns[key].km=km;if(tm!=="")nRuns[key].t=tm;}
+    else if(cat==="Lift"||cat==="Main"||cat==="Accessory"||cat==="Legacy"){
+      if(!key)continue;var si=parseInt(g(r,"set"),10);if(isNaN(si)||si<1)continue;
+      var e=nLogs[key]=nLogs[key]||{sets:[]};e.sets[si-1]=e.sets[si-1]||{};
+      if(wt!=="")e.sets[si-1].w=wt;if(rp!=="")e.sets[si-1].r=rp;}
+    else if(cat==="Session"){if(key)nSess[key]=true;}
+    else if(cat==="Mobility"){if(key)nMob[key]=true;}
+    else if(cat==="Move"){var mp=key.split(":"),it2=g(r,"item");if(mp.length===2&&DAYS7.indexOf(mp[1])>=0&&DAYS7.indexOf(it2)>=0){(nMoves[mp[0]]=nMoves[mp[0]]||{})[mp[1]]=it2;}}
+    else if(cat==="Travel"){if(key)nTrav[key]=true;}
+    else if(cat==="Meta"){if(key==="shift28")fixed=true;}
+  }
+  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;
+  Object.keys(nMoves).forEach(function(wk){DAYS7.forEach(function(d){if(!nMoves[wk][d])nMoves[wk][d]=d;});});S.moves=nMoves;
+  // A file from the old app (before the date fix) still has the haze-period weeks one ahead: fix them the same way.
+  delete S.shiftNote;
+  if(!fixed){try{localStorage.setItem("ss_state_before_shift28",JSON.stringify(S));}catch(e){}
+    var nm=shiftBackOneWeek();if(nm)S.shiftNote=nm;}
+  S.shift28=true;S.week=currentWeek();S.view="new";persist();render();return true;
+}
+
+// ---------- views ----------
+function runHTML(slot,day,title,target,unit,spec,note,cls,dl,wk){
+  dl=dl||"km";var key=(wk||S.week)+":"+slot,lg=S.runs[key]||{};
+  return '<div class="run '+(cls||'')+'">'+
+    '<div class="rtop"><div><div class="rname">'+day+' · '+esc(title)+'</div>'+
+    (spec?'<div class="rspec">'+esc(spec)+'</div>':'')+'</div>'+
+    '<div><div class="rt">'+target+'</div><div class="runit">'+unit+'</div></div></div>'+
+    (note?'<div class="rnote">'+esc(note)+'</div>':'')+
+    '<div class="logrow"><span class="setn">'+dl+'</span>'+
+    '<input inputmode="decimal" placeholder="'+dl+'" data-run="'+key+'" data-f="km" value="'+(lg.km!=null?esc(lg.km):'')+'">'+
+    '<span class="setn">time</span>'+
+    '<input inputmode="text" placeholder="'+(dl==="m"?"mm:ss":"h:mm")+'" data-run="'+key+'" data-f="t" value="'+(lg.t!=null?esc(lg.t):'')+'"></div></div>';
+}
+function mainHTML(m,trav){
+  var w=WEEKS[S.week-1],W=liftW(m),T=liftTop(m),B=bigW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
+  for(var si=0;si<w.sets;si++){var st=wl[si]||{},isTop=!!(m.top&&si===0);
+    var ph=isTop?(T?fmt(T):'kg'):(W?fmt(W):'kg'),reps=isTop?m.top:m.reps,lbl=isTop?'Top':'Set '+(m.top?si:si+1);
+    rows+='<div class="logrow"><span class="setn">'+lbl+'</span><input inputmode="decimal" placeholder="'+ph+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+reps+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
+  return '<div class="main"><div class="mtop"><div><div class="mname">'+m.name+'</div>'+
+    '<div class="mspec">'+liftSpec(m)+'</div></div>'+
+    '<div><div class="wt" id="wt-'+m.k+'">'+(B?fmt(B):'—')+'</div><div class="unit">'+(m.top?'kg top':'kg')+'</div></div></div>'+
+    (m.note?'<div class="mnote">'+esc(m.note)+'</div>':'')+
+    ((B&&!trav)?'<div class="ramp">Ramp: '+ramp(B).join("  →  ")+'  →  <b>work</b></div>':'')+
+    (trav?'<div class="fallback"><b>Barbell if available.</b> Otherwise: '+esc(m.fallback)+'</div>':'')+
+    rows+'</div>';
+}
+function accHTML(a,idx){
+  var n=parseSets(a[1]),reps=parseReps(a[1]),key=K()+":acc:"+idx,wl=(S.logs[key]||{}).sets||[],rows="";
+  for(var si=0;si<n;si++){var st=wl[si]||{};
+    rows+='<div class="logrow"><span class="setn">Set '+(si+1)+'</span><input inputmode="decimal" placeholder="kg" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+(reps||'reps')+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
+  return '<li><div class="acctop"><span>'+esc(a[0])+'</span><span class="p">'+esc(a[1])+'</span></div>'+
+    (a[2]?'<div class="accstart">start '+esc(a[2])+'</div>':"")+rows+'</li>';
+}
+function liftHTML(){
+  var trav=false;
+  return '<div class="day"><div class="dhead">'+liftDay(S.week)+' · Strength</div>'+
+    '<div class="warm"><div class="warmh">Warm-up first</div>'+
+    '<div class="warmi"><b>1.</b> 5 min easy bike or row, then McGill Big 3</div>'+
+    '<div class="warmi"><b>2.</b> Ramp each lift to its working weight</div></div>'+
+    mainsFor(S.week).map(function(m){return mainHTML(m,trav);}).join("")+
+    '<div class="acc"><div class="lbl">Accessories</div>'+
+    '<div class="accnote">'+(S.week<NEW_FROM?'Maintenance, not progression. RPE 7–8, never to failure — the runs are the priority now.':
+      'Upper body can keep building: when every set of a pull feels solid, add a rep or a little weight. Legs stay on maintenance. RPE 7–8, never to failure. Short on time? Alternate sets — pull-ups with calf raises, rows with knee raises.')+'</div>'+
+    '<ul>'+accFor(S.week).map(accHTML).join("")+'</ul></div></div>';
+}
+function render(){
+  if(S.view==="old")return renderOld();
+  var w=WEEKS[S.week-1],td=todayDay(),isNow=(S.week===currentWeek());
+  var doneCount=SCHED.filter(function(s){return !!S.sessions[K()+":"+s[0]];}).length;
+  var d2r=daysToRace();
+  document.getElementById("app").innerHTML=
+  '<div class="eyebrow">Half Marathon Block</div>'+
+  '<h1>The Half</h1>'+
+  '<p class="lead">Ten weeks. One gym day. The long run is the block.</p>'+
+
+  (S.shiftNote?'<div class="obanner"><b>Dates fixed.</b> The block runs from 28 Sep again, so this is week '+currentWeek()+'. '+
+    'Everything you logged one tab ahead since 11 Oct has moved back a week to its real dates ('+S.shiftNote+' entries). '+
+    'From now on, log in the week the app shows.'+
+    '<div class="btnrow" style="justify-content:flex-start;margin-top:10px"><button class="arrbtn on" data-act="shift-ok">Looks right</button>'+
+    '<button class="arrbtn" data-act="shift-undo">Undo</button></div></div>':'')+
+  '<div class="count"><div><div class="cdays">'+(d2r>0?d2r:0)+'</div><div class="clbl">'+(d2r>0?"days to go":d2r===0?"race day":"done")+'</div></div>'+
+  '<div class="cright"><div class="crace">Sun 6 Dec · '+RACE.event+'</div><div class="cmeta">'+RACE.name+'</div><div class="cmeta">'+RACE.meta+'</div></div></div>'+
+  rewardHTML()+
+
+  maxesHTML("Coming back from time off — set these ~10% under your old numbers and earn them back.")+
+  stripHTML()+
+
+  '<div class="wkhead"><div><b>Week '+S.week+'</b>'+
+  '<span class="badge" style="color:'+PHASE[w.phase]+';border-color:'+PHASE[w.phase]+'">'+w.phase+'</span>'+
+  (doneCount?'<span class="donecount">'+doneCount+' done</span>':'')+
+  '<div class="dates">'+weekRange(S.week)+(isNow?' · this week':'')+'</div></div>'+
+  '<div class="hbtns"><span class="hint">tap ✓ when done</span>'+
+  '<button class="arrbtn'+(arranging?' on':'')+'" data-act="arrange">'+(arranging?'Done':'⇅ Move days')+'</button></div></div>'+
+  (arranging?'<div class="arrbar"><span>'+(picked?'Now tap the day to swap <b>'+picked+'</b> with.':'Tap a day, then the day to swap it with.')+'</span>'+
+    (moveMap(S.week)?'<button class="arrbtn" data-act="arrange-reset">Reset week</button>':'')+'</div>':'')+
+  moveWarnings(S.week).map(function(t){return '<div class="warnb">'+esc(t)+'</div>';}).join("")+
+
+  schedHTML(weekRows(S.week).map(function(r){return [r[0],r[1],r[2],null,null,r[4],r[5]];}),K()+":",isNow,td,S.week===RACE_WEEK)+
+
+  (ovr(S.week).extraLong?(function(e){var pw=WEEKS[e.from-1];return runHTML("long",dispDay(S.week,e.day),"Long run (moved from Sun, haze)",pw.long,"km","week "+e.from+"'s long run, easy",ovr(S.week).longNote,"key",null,e.from);})(ovr(S.week).extraLong):"")+
+  runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",w.lnote,(S.week===RACE_WEEK?"race":"key"))+
+  ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session","the one hard run",w.q.d+sprintNote(S.week),"key"):"")+
+  runHTML("swim",dispDay(S.week,"Fri"),"Swim",(S.week===RACE_WEEK?"15":"20–30"),"min easy","zero impact, active recovery","Easy and continuous, any stroke. No intervals — this is about loosening the legs and banking aerobic minutes with no impact, two days out from the long run. Log metres if you count them.","","m")+
+
+  mobHTML()+
+  liftHTML()+
+  '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
+
+  '<div class="ref"><button data-act="ref">How to run it<span>'+(S.ref?'▲':'▼')+'</span></button>'+
+  (S.ref?'<div class="refbody">'+
+    '<h4>Easy means easy</h4>'+
+    '<p>Roughly <span class="g">80%</span> of your running should be conversational — able to speak full sentences. Most people ruin a block by running their easy days too hard and their hard days too soft. The quality run and the Sunday long run are the only two that matter; everything else is just getting blood to the legs.</p>'+
+    '<h4>Strength is maintenance now</h4>'+
+    '<p>One session a week holds your strength for 8–12 weeks — that is well established, and it is all you need through a race build. What actually preserves strength is <span class="a">intensity, not volume</span>, so squat and bench are built like a proper maintenance day: work up to <b>one clean top triple</b> at 77–85%, then a couple of crisp back-off fives. Brace hard, own the descent, never grind a rep. The conventional deadlift stays out — it costs more recovery than it returns while you are running — but the Romanian deadlift is now a real lift off your deadlift max, not an afterthought, because a strong posterior chain is your best protection against running injuries. Rows and pull-ups keep the back honest; the <span class="a">calf raises are not optional</span> — they are the cheapest achilles insurance you will ever buy.</p>'+
+    '<h4>Building the upper body</h4>'+
+    '<p>From week 3 the lift moves to Tuesday and the overhead press joins the bench every week. Pressing and pulling cost your running almost nothing, so unlike your legs, your upper body does not have to sit on maintenance: when the bench top triple or every set of 6 overhead feels comfortable, raise that max and let the app recalculate. Pull-ups go first while you are fresh, then the dumbbell row, which works the back without loading the lower back straight after Romanian deadlifts.</p>'+
+    '<h4>Sprints with your friend</h4>'+
+    '<p>The Thursday sprints replace the quality run; they are never added on top of it. All-out sprinting is the most common cause of hamstring strains, and strains are your injury pattern, so stay around 85–90% for the first few weeks, warm up properly first, and stop the moment a hamstring tightens. From week 5 the tempo comes first and the sprints are a short finish. Race week has none.</p>'+
+    '<h4>Monday mobility</h4>'+
+    '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of strength work: bridge walkouts, slow calf lowers and a foam-roller squeeze for the groin. That strength is what makes hamstrings, calves and groin harder to strain. It starts in week 3 and only needs a mat, a foam roller, a ball and a wall. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
+    '<h4>Boxing alongside the running</h4>'+
+    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Wednesday is the full session. Saturday stays light and technical — pads, footwork and drills, no hard conditioning rounds — because you run long the next morning. Friday is a swim: zero impact, genuinely easy aerobic minutes, and the best thing you can do for your legs two days out from the long run — it flushes them without loading them. Only <span class="a">two</span> sessions each week are meant to be hard: the quality run and the long run. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
+    '<h4>Cutback and taper weeks</h4>'+
+    '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
+    '<h4>Race day</h4>'+
+    '<p>Week 8 is your dress rehearsal — race kit, race breakfast, race fuelling, nothing new. On the day, run the first 5 km slower than feels right. A half is won in the last 5 km, and the cut-off is 3h45, so there is no need to panic early.</p>'+
+    '<h4>If something hurts</h4>'+
+    '<p>You are coming back from injury. Sharp pain, or any niggle that changes how you run, means stop that session — not push through it. Missing one run costs nothing; missing three weeks costs the race.</p>'+
+  '</div>':'')+'</div>'+
+
+  footerHTML();
+  scrollStrip();
+}
+
+const app=document.getElementById("app");
+app.addEventListener("input",function(e){
+  var t=e.target;
+  if(t.dataset.rm){
+    var v=t.value;S.oneRMs[t.dataset.rm]=v===""?"":Number(v);persist();
+    if(S.view==="old")Object.keys(OLD_PROG).forEach(function(k){var el=document.getElementById("wt-"+k);if(el){var W=oldW(k);el.textContent=W?fmt(W):"—";}});
+    else mainsFor(S.week).forEach(function(m){var el=document.getElementById("wt-"+m.k);if(el){var B=bigW(m);el.textContent=B?fmt(B):"—";}});
+  }else if(t.dataset.log){
+    var key=t.dataset.log,si=+t.dataset.set,f=t.dataset.f;
+    var o=S.logs[key]=S.logs[key]||{};var arr=o.sets=o.sets||[];arr[si]=arr[si]||{};arr[si][f]=t.value;persist();
+  }else if(t.dataset.run){
+    var rk=t.dataset.run;var ro=S.runs[rk]=S.runs[rk]||{};ro[t.dataset.f]=t.value;persist();
+  }
+});
+app.addEventListener("change",function(e){
+  if(e.target.id!=="csvfile")return;
+  var f=e.target.files&&e.target.files[0];e.target.value="";
+  if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    if(!confirm("Import this file? It replaces the training data on THIS device. Export first if unsure."))return;
+    if(!importCSV(String(rd.result)))alert("Couldn't read that file. Make sure it's a CSV exported from this app.");
+  };
+  rd.readAsText(f);
+});
+app.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.dataset.week){arranging=false;picked=null;S.view="new";S.week=Number(b.dataset.week);persist();render();}
+  else if(b.dataset.oweek){arranging=false;picked=null;S.view="old";S.oweek=Number(b.dataset.oweek);persist();render();}
+  else if(b.dataset.act==="move"){
+    var from=S.week,ans=prompt("Move ALL of week "+from+"'s logs (runs, lifts, checkmarks) to which week? (1–"+WEEKS.length+")");
+    if(ans==null)return;var to=parseInt(ans,10);
+    if(isNaN(to)||to<1||to>WEEKS.length||to===from){alert("Pick a different week between 1 and "+WEEKS.length+".");return;}
+    if(weekHasData(to)&&!confirm("Week "+to+" already has logs. They will be REPLACED by week "+from+"'s. Continue?"))return;
+    moveWeek(from,to);}
+  else if(b.dataset.act==="shift-ok"){delete S.shiftNote;persist();render();}
+  else if(b.dataset.act==="shift-undo"){if(confirm("Put your logs back where they were (one week ahead)?")){if(!undoShift())alert("No backup found.");render();}}
+  else if(b.dataset.act==="arrange"){arranging=!arranging;picked=null;render();}
+  else if(b.dataset.act==="arrange-reset"){delete S.moves[S.week];picked=null;persist();render();}
+  else if(b.dataset.pick){var d=b.dataset.pick;
+    if(!picked)picked=d;else if(picked===d)picked=null;else{swapDays(S.week,picked,d);picked=null;}
+    render();}
+  else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;if(S.sessions[k])delete S.sessions[k];else S.sessions[k]=true;persist();render();}
+  else if(b.dataset.mob){var mk=K()+":mob:"+b.dataset.mob;
+    if(S.mob[mk])delete S.mob[mk];
+    else{S.mob[mk]=true;if(mobItems().every(function(x){return S.mob[K()+":mob:"+x.i];})){var mt=ovr(S.week).mobTick;S.sessions[mt?BLOCK+mt[0]+":"+mt[1]:K()+":Mon"]=true;}} // finishing the routine ticks Monday
+    persist();render();}
+  else if(b.dataset.act==="mobopen"){S.mobOpen=!(S.mobOpen!==false);persist();render();}
+  else if(b.dataset.act==="copyweek"){copyText(S.view==="old"?oldSessionText():sessionText(),b);}
+  else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
+  else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
+  else if(b.dataset.act==="export"){downloadCSV(b);}
+  else if(b.dataset.act==="import"){var fi=document.getElementById("csvfile");if(fi)fi.click();}
+  else if(b.dataset.act==="reset"){if(confirm("Clear all logged runs and sets? Your maxes stay.")){S.logs={};S.runs={};persist();render();}}
+});
+render();
+</script>
+</body>
+</html>
