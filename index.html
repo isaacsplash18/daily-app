@@ -220,6 +220,11 @@ const WEEKS=[
  {n:10,phase:"Race",pct:.60,long:21.1,lnote:"RACE DAY. Go out slower than feels right for the first 5 km — you'll thank yourself at 18.",
   q:{n:"Primer",s:"3 × 2 min @ race pace",d:"Three days out from the race. Short and sharp, then rest up and eat well."},sets:1,easy:[4,4]}];
 
+// Strength can run on a different week's load than the runs (lp = lift %, ls = lift sets).
+// During the haze the lighter strength session was done in week 3, so weeks 3 and 4 swap their strength loads.
+WEEKS[2].lp=.675;WEEKS[2].ls=2;WEEKS[3].lp=.75;WEEKS[3].ls=3;
+function lPct(w){return w.lp!=null?w.lp:w.pct;}
+function lSets(w){return w.ls||w.sets;}
 const RACE_WEEK=WEEKS.length; // race week is always the last week
 
 // "How to do it" for each session: numbered steps, how it should feel, why, total time.
@@ -489,13 +494,13 @@ function parseSets(p){var m=String(p).match(/^\s*(\d+)\s*sets?/i);return m?+m[1]
 function parseReps(p){var m=String(p).match(/[×x]\s*(\d+)/);return m?+m[1]:0;}
 const K=()=>S.view==="old"?String(S.oweek):BLOCK+S.week;
 function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
-function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(m.fixed!=null?m.fixed:(w.pct+(m.adj||0)))):0;}
-function liftTop(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return (rm&&m.top)?r25(rm*(w.pct+m.topAdj)):0;}
+function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(m.fixed!=null?m.fixed:(lPct(w)+(m.adj||0)))):0;}
+function liftTop(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return (rm&&m.top)?r25(rm*(lPct(w)+m.topAdj)):0;}
 function bigW(m){return m.top?liftTop(m):liftW(m);}
 function pctStr(p){return Math.round(p*100)+"%";}
-function liftSpec(m){var w=WEEKS[S.week-1],n=w.sets;
-  if(m.top){var bo=Math.max(n-1,0);return "Top 1 × "+m.top+" @ "+pctStr(w.pct+m.topAdj)+(bo?" · then "+bo+" × "+m.reps+" @ "+pctStr(w.pct):"");}
-  return n+" × "+m.reps+" @ "+pctStr(m.fixed!=null?m.fixed:w.pct+(m.adj||0));}
+function liftSpec(m){var w=WEEKS[S.week-1],n=lSets(w),p=lPct(w);
+  if(m.top){var bo=Math.max(n-1,0);return "Top 1 × "+m.top+" @ "+pctStr(p+m.topAdj)+(bo?" · then "+bo+" × "+m.reps+" @ "+pctStr(p):"");}
+  return n+" × "+m.reps+" @ "+pctStr(m.fixed!=null?m.fixed:p+(m.adj||0));}
 
 // ---- Previous block (12-week Strength System): read-only view of the old logs ----
 const OLD_LIFTS={squat:"Back squat",bench:"Bench press",deadlift:"Deadlift",ohp:"Overhead press"};
@@ -900,7 +905,7 @@ function runHTML(slot,day,title,target,unit,spec,note,cls,dl,wk,extra,how){
 }
 function mainHTML(m,trav){
   var w=WEEKS[S.week-1],W=liftW(m),T=liftTop(m),B=bigW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
-  for(var si=0;si<w.sets;si++){var st=wl[si]||{},isTop=!!(m.top&&si===0);
+  for(var si=0;si<lSets(w);si++){var st=wl[si]||{},isTop=!!(m.top&&si===0);
     var ph=isTop?(T?fmt(T):'kg'):(W?fmt(W):'kg'),reps=isTop?m.top:m.reps,lbl=isTop?'Top':'Set '+(m.top?si:si+1);
     rows+='<div class="logrow"><span class="setn">'+lbl+'</span><input inputmode="decimal" placeholder="'+ph+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+reps+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
   return '<div class="main"><div class="mtop"><div><div class="mname">'+m.name+'</div>'+
