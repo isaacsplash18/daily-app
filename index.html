@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="The Half" />
+<meta name="apple-mobile-web-app-title" content="Hybrid" />
 <meta name="theme-color" content="#0a0a0a" />
-<link rel="manifest" href="/manifest.json" />
-<link rel="icon" href="/icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="/icon.svg" />
-<title>Half Marathon Block</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<title>Hybrid Training</title>
 <style>
   :root{
     --bg:#0a0a0a; --panel:#171717; --panel2:#1f1f1f; --line:#2a2a2a;
@@ -649,7 +649,7 @@ function sessionText(){
   return out;
 }
 function fullLogText(){
-  var out="Half Marathon Block — training log",found=false;
+  var out="Hybrid Training — training log",found=false;
   for(var wk=1;wk<=WEEKS.length;wk++){
     var W=WEEKS[wk-1],ln="";
     [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"]].forEach(function(s){
@@ -677,6 +677,7 @@ const RM_NAMES=[["squat","Back squat"],["bench","Bench press"],["deadlift","Dead
 function csvCell(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
 function buildCSV(){
   var rows=[["Category","Week","Day","Item","Set","Weight","Reps","Distance","Time","Done","Key"]];
+  rows.push(["Meta","","","dates fixed (28 Sep)","","","","","","","shift28"]);
   RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
   for(var wk=1;wk<=WEEKS.length;wk++){
     [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim",dispDay(wk,"Fri")]].forEach(function(s){
@@ -704,7 +705,7 @@ function downloadCSV(btn){
   try{
     var blob=new Blob([buildCSV()],{type:"text/csv;charset=utf-8"});
     var url=URL.createObjectURL(blob),a=document.createElement("a");
-    a.href=url;a.download="half-marathon-log.csv";document.body.appendChild(a);a.click();
+    a.href=url;a.download="hybrid-training-log.csv";document.body.appendChild(a);a.click();
     setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},0);
     flash(btn);
   }catch(e){alert("Could not download. Try Copy full log instead.");}
@@ -723,7 +724,7 @@ function importCSV(text){
   var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
   ["category","week","day","item","set","weight","reps","distance","time","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
   if(ci.category<0||ci.key<0)return false;
-  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nRMs=Object.assign({},S.oneRMs);
+  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nRMs=Object.assign({},S.oneRMs),fixed=false;
   var g=function(r,n){return ci[n]>=0?(r[ci[n]]||"").trim():"";};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
@@ -738,9 +739,15 @@ function importCSV(text){
     else if(cat==="Mobility"){if(key)nMob[key]=true;}
     else if(cat==="Move"){var mp=key.split(":"),it2=g(r,"item");if(mp.length===2&&DAYS7.indexOf(mp[1])>=0&&DAYS7.indexOf(it2)>=0){(nMoves[mp[0]]=nMoves[mp[0]]||{})[mp[1]]=it2;}}
     else if(cat==="Travel"){if(key)nTrav[key]=true;}
+    else if(cat==="Meta"){if(key==="shift28")fixed=true;}
   }
   S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;
-  Object.keys(nMoves).forEach(function(wk){DAYS7.forEach(function(d){if(!nMoves[wk][d])nMoves[wk][d]=d;});});S.moves=nMoves;persist();render();return true;
+  Object.keys(nMoves).forEach(function(wk){DAYS7.forEach(function(d){if(!nMoves[wk][d])nMoves[wk][d]=d;});});S.moves=nMoves;
+  // A file from the old app (before the date fix) still has the haze-period weeks one ahead: fix them the same way.
+  delete S.shiftNote;
+  if(!fixed){try{localStorage.setItem("ss_state_before_shift28",JSON.stringify(S));}catch(e){}
+    var nm=shiftBackOneWeek();if(nm)S.shiftNote=nm;}
+  S.shift28=true;S.week=currentWeek();S.view="new";persist();render();return true;
 }
 
 // ---------- views ----------
