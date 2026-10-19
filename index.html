@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="The Half" />
+<meta name="apple-mobile-web-app-title" content="Hybrid" />
 <meta name="theme-color" content="#0a0a0a" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="icon.svg" />
-<title>Half Marathon Block</title>
+<link rel="apple-touch-icon" href="icon-180.png" />
+<title>Hybrid Training</title>
 <style>
   :root{
     --bg:#0a0a0a; --panel:#171717; --panel2:#1f1f1f; --line:#2a2a2a;
@@ -649,7 +649,7 @@ function sessionText(){
   return out;
 }
 function fullLogText(){
-  var out="Half Marathon Block — training log",found=false;
+  var out="Hybrid Training — training log",found=false;
   for(var wk=1;wk<=WEEKS.length;wk++){
     var W=WEEKS[wk-1],ln="";
     [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"]].forEach(function(s){
@@ -705,7 +705,7 @@ function downloadCSV(btn){
   try{
     var blob=new Blob([buildCSV()],{type:"text/csv;charset=utf-8"});
     var url=URL.createObjectURL(blob),a=document.createElement("a");
-    a.href=url;a.download="half-marathon-log.csv";document.body.appendChild(a);a.click();
+    a.href=url;a.download="hybrid-training-log.csv";document.body.appendChild(a);a.click();
     setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},0);
     flash(btn);
   }catch(e){alert("Could not download. Try Copy full log instead.");}
