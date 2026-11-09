@@ -197,6 +197,13 @@
 const RACE={name:"BYD Singapore International Marathon",event:"Half Marathon · 21.1 km",date:"2026-12-06",meta:"F1 Pit Building → National Stadium · 3h45 cut-off"};
 const START="2026-09-28"; // Monday of week 1
 const BLOCK="hm26";
+// After the half: the MetaSprint Series triathlon. The 2027 date and distances aren't announced yet; the
+// 2026 race was Sun 29 Mar at East Coast Park, so this assumes the last Sunday of March and sprint distance.
+const TRI={name:"MetaSprint Series Triathlon",event:"Sprint triathlon",date:"2027-03-28",
+  meta:"East Coast Park · 750 m sea swim · 20 km bike · 5 km run",tbc:"Date and distances to confirm when the 2027 series is announced"};
+const TRI_START="2026-12-07"; // the Monday after the half
+const TBLOCK="tri";
+function isTriN(n){return typeof n==="string"&&n.charAt(0)==="t";}
 
 const WEEKS=[
  {n:1,phase:"Base",pct:.70,long:12,lnote:"Conversational the whole way. If you can't talk, slow down.",
@@ -223,6 +230,9 @@ const WEEKS=[
 // Strength can run on a different week's load than the runs (lp = lift %, ls = lift sets).
 // During the haze the lighter strength session was done in week 3, so weeks 3 and 4 swap their strength loads.
 WEEKS[2].lp=.675;WEEKS[2].ls=2;WEEKS[3].lp=.75;WEEKS[3].ls=3;
+// Week 6's strength session was missed. Week 7 lifts at a normal load (the runs are on cutback) instead of
+// the planned cutback load; nothing is doubled up to make up for it.
+WEEKS[6].lp=.75;WEEKS[6].ls=3;
 function lPct(w){return w.lp!=null?w.lp:w.pct;}
 function lSets(w){return w.ls||w.sets;}
 const RACE_WEEK=WEEKS.length; // race week is always the last week
@@ -335,7 +345,12 @@ function mainsFor(n){return n<NEW_FROM?MAINS:[MAINS[0],MAINS[1],OHP,MAINS[2]];}
 function accFor(n){return n<NEW_FROM?ACC:ACC3;}
 // One-off week rewrites, keyed by week. The October haze weeks were reverted to the normal plan;
 // day-to-day changes now go through "Move days" (S.moves) instead.
-const OVR={};
+// Week 7: the last boxing class is on Tuesday 10 Nov, so strength moves to Wednesday.
+const OVR={7:{lift:"Wed",sched:{
+  Tue:["Tue","Boxing — last class","membership ends; keep it technical",null,"var(--ink2)"],
+  Wed:["Wed","Strength","moved from Tue · skip the squat top triple","lift","var(--amber)"]}}};
+// Boxing ends after week 7. From week 8 Wednesday is easy cycling or swimming instead, and Saturday is rest.
+const BOX_END=8;
 function ovr(n){return OVR[n]||{};}
 function liftDay(n){var o=ovr(n);return dispDay(n,o.lift||(n<NEW_FROM?"Thu":"Tue"));}
 function qDay(n){var o=ovr(n);return dispDay(n,("q" in o)?o.q:(n<NEW_FROM?"Tue":"Thu"));}
@@ -359,10 +374,12 @@ function swapDays(n,a,b){var m={};DAYS7.forEach(function(d){m[d]=srcAt(n,d);});v
 function friChoice(n){if(n===RACE_WEEK)return (S.fri&&S.fri[n])||"swim";for(var k=n;k>=1;k--){if(S.fri&&S.fri[k])return S.fri[k];}return "swim";}
 function moveWarnings(n){
   if(!moveMap(n))return [];
-  var rows=weekRows(n),out=[],name={quality:"quality run",long:"long run",lift:"strength"},hard=function(x){return x==="quality"||x==="long";};
+  // In the triathlon block the long run is easy; the hard days are the Thursday run and the Saturday brick.
+  var rows=weekRows(n),out=[],name={quality:"quality run",long:"long run",lift:"strength",runq:"run session",brick:"brick"},
+      hard=isTriN(n)?function(x){return x==="runq"||x==="brick";}:function(x){return x==="quality"||x==="long";};
   for(var i=0;i<6;i++){var a=rows[i][3],b=rows[i+1][3];
     if(hard(a)&&hard(b))out.push(rows[i][0]+" "+name[a]+" and "+rows[i+1][0]+" "+name[b]+" are back to back — two hard days in a row. Keep one of them easy.");
-    if(a==="lift"&&(b==="quality"||b==="long"))out.push("Strength on "+rows[i][0]+" is the day before your "+name[b]+" — expect heavy legs. Skip the squat top triple that week.");}
+    if(a==="lift"&&(b==="quality"||b==="long"||b==="runq"||b==="brick"))out.push("Strength on "+rows[i][0]+" is the day before your "+name[b]+" — expect heavy legs. Skip the squat top triple that week.");}
   return out;}
 var arranging=false,picked=null;
 function sprintNote(n){
@@ -384,11 +401,12 @@ const SCHED=[
 // Mobility Mondays (and Saturday boxing) start in week 3; race week rests on Saturday.
 const MOB_FROM=3;
 // Haze: the long run, quality run and swim can each be moved indoors per week (S.indoor["week:slot"]).
-function isIndoor(n,slot){return !!S.indoor[n+":"+slot]&&!(slot==="long"&&n===RACE_WEEK);}
-function indoorBtn(slot){var on=isIndoor(S.week,slot);
+// The haze has cleared: the button only shows on a session that was moved indoors, so it can be moved back.
+function isIndoor(n,slot){return typeof n==="number"&&!!S.indoor[n+":"+slot]&&!(slot==="long"&&n===RACE_WEEK);}
+function indoorBtn(slot){var on=isIndoor(S.week,slot);if(!on)return "";
   return '<div class="indoor"><button class="arrbtn'+(on?' on':'')+'" data-indoor="'+slot+'">'+(on?'☀ Back outdoors':'☁ Hazy? Move indoors')+'</button>'+
     '<a class="psi" href="https://www.haze.gov.sg/" target="_blank" rel="noopener">Check PSI</a></div>';}
-function schedFor(n){return schedPlan(n).map(function(r){
+function schedFor(n){if(isTriN(n))return triSched(+n.slice(1));return schedPlan(n).map(function(r){
   if(r[3]==="long"&&isIndoor(n,"long"))return [r[0],r[1]+" — treadmill","indoors, haze","long",r[4]];
   if(r[3]==="quality"&&isIndoor(n,"quality"))return [r[0],"Quality run — treadmill","indoors, haze","quality",r[4]];
   if(r[3]==="swim"&&isIndoor(n,"swim"))return [r[0],"Indoor cardio","bike, elliptical or rower","cardio",r[4]];
@@ -400,7 +418,9 @@ function schedPlan(n){var o=ovr(n);return SCHED.map(function(s){
   if(n<MOB_FROM&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
   if(n<NEW_FROM&&s[0]==="Tue")return ["Tue","Quality run","the hard one","quality","var(--sky)"];
   if(n<NEW_FROM&&s[0]==="Thu")return ["Thu","Strength","one full-body session","lift","var(--amber)"];
-  if(n>=6&&n<=8&&s[0]==="Sat")return ["Sat","Boxing — very light","skip it if Thursday left you flat",null,"var(--ink2)"];
+  if(n>=BOX_END&&s[0]==="Wed")return ["Wed","Easy bike or swim",n===RACE_WEEK?"20 min, loosen up":"30–40 min, replaces boxing","xt","var(--green)"];
+  if(n>=BOX_END-1&&n<RACE_WEEK&&s[0]==="Sat")return ["Sat","Rest","long run tomorrow",null,"var(--ink4)"];
+  if(n===6&&s[0]==="Sat")return ["Sat","Boxing — very light","skip it if Thursday left you flat",null,"var(--ink2)"];
   if(n===RACE_WEEK&&s[0]==="Sat")return ["Sat","Rest","race tomorrow — feet up",null,"var(--ink4)"];
   return s;});}
 
@@ -423,17 +443,18 @@ const MOB=[
  ["End-range strength","Deep squat hold","3 × 30 s","Hold a door frame if you need to. Heels down, chest up.",2],
  ["End-range strength","Adductor squeeze, foam roller","5 × 5 s","On your back, knees bent, foam roller across between the knees. Squeeze hard for 5 s, relax. No roller to hand? Stack both fists between the knees. Strengthens the groin against strains.",2],
  ["Finish","Legs up the wall","2 min","Slow breathing on the mat. You're done when your breathing has settled.",2]];
-function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(S.week===RACE_WEEK&&x.m[5]);});}
+function raceView(){return S.view==="tri"?S.tweek===TRI_WEEKS.length:S.week===RACE_WEEK;}
+function mobItems(){return MOB.map(function(m,i){return{m:m,i:i};}).filter(function(x){return !(raceView()&&x.m[5]);});}
 function mobHTML(){
-  if(S.week<MOB_FROM)return "";
+  var tri=S.view==="tri";if(!tri&&S.week<MOB_FROM)return "";
   var items=mobItems(),done=items.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length,
       mins=items.reduce(function(a,x){return a+x.m[4];},0),open=S.mobOpen!==false,sec="";
-  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">'+((!moveMap(S.week)&&ovr(S.week).mobLabel)||mobDay(S.week))+' · Mobility</div>'+
+  var h='<div class="day mob"><div class="mobhead"><div><div class="dhead" style="margin:0">'+(tri?dispDay(curN(),"Mon"):((!moveMap(S.week)&&ovr(S.week).mobLabel)||mobDay(S.week)))+' · Mobility</div>'+
     '<div class="rspec">~'+mins+' min · hips, hamstrings, calves</div><div class="accstart">kit: yoga mat · foam roller · ball · a wall</div></div>'+
     '<div class="rt" style="color:var(--green)">'+done+'<small>/'+items.length+'</small></div></div>'+
     '<div class="bar"><div style="width:'+Math.round(done/items.length*100)+'%"></div></div>'+
     '<div class="rnote">Stretch to about 4–5 out of 10, never into pain. Breathe out into each hold, no bouncing. If an area is freshly strained, skip it this week.'+
-    (S.week===RACE_WEEK?' <b>Race week:</b> the bridge walkouts and slow calf lowers are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
+    (raceView()?' <b>Race week:</b> the bridge walkouts and slow calf lowers are dropped, so nothing leaves you sore before Sunday.':'')+'</div>'+
     '<button class="copybtn" data-act="mobopen">'+(open?'Hide routine ▲':'Show routine ▼')+'</button>';
   if(open){h+='<div class="moblist">';items.forEach(function(x){var m=x.m,on=!!S.mob[K()+":mob:"+x.i];
       if(m[0]!==sec){sec=m[0];h+='<div class="lbl mobsec">'+esc(sec)+'</div>';}
@@ -443,14 +464,202 @@ function mobHTML(){
     h+='</div>';}
   return h+'</div>';}
 
+// ---- Triathlon block: 16 weeks from the day after the half to the MetaSprint triathlon ----
+// Week shape: Mon technique swim + mobility · Tue strength (or CrossFit) · Wed easy ride · Thu run with your friend ·
+// Fri swim fitness · Sat brick (race-effort ride, then run off the bike) · Sun easy long run with the group.
+// Only Thursday and Saturday are hard; everything else is easy. Every 4th week is a cutback.
+// Each session: t target, u unit, s one-line spec, st steps, tot total time.
+const RE="Race effort on the bike: hard but steady, the pace you could hold for about 45 min — a few words at a time.";
+const TRI_WEEKS=[
+ {n:1,phase:"Recovery",pct:.60,sets:2,lnote:"Light. Bench, overhead press, pull-ups and rows as normal; skip the squat, Romanian deadlift and Nordics if your legs are still sore from the half.",
+  note:"Recovery week. Your legs are still repairing from Sunday's half, which takes about a week. Nothing hard, and no running before Thursday.",
+  swimA:{t:"20",u:"min",s:"Easy swim, any stroke",st:["Swim easy for 20 min, any stroke. Rest at the wall whenever you like.","No drills and no pace — just loosen up."],tot:"20 min"},
+  bike:{t:"30",u:"min",s:"Easy spin",st:["Ride 30 min easy, on a stationary bike or outside. Light gear, legs spinning freely."],tot:"30 min"},
+  runq:{t:"20–30",u:"min",s:"Easy jog, only if your legs feel normal",st:["Still sore? Swap this for another easy ride, or rest.","Otherwise jog 20–30 min easy with your friend. No speed this week."],tot:"30 min"},
+  swimB:{t:"20–30",u:"min",s:"Easy swim",st:["Swim easy and continuously, any stroke, for 20–30 min."],tot:"30 min"},
+  brick:{title:"Easy ride",t:"45",u:"min",s:"no run this week",st:["Ride 45 min easy.","No run off the bike this week."],tot:"45 min"},
+  long:{km:5,s:"easy, only if nothing hurts",note:"Your first run with the group since the race. Easy, and only if nothing hurts."}},
+ {n:2,phase:"Base",pct:.70,sets:3,
+  note:"Base. Everything easy except Thursday. Learn the swim drills and get used to riding.",
+  swimA:{t:"1,000",u:"m",s:"Technique: drills and easy swimming",st:["300 m easy, any stroke.","8 × 25 m drills with 20 s rest, alternating catch-up and side kick (see below).","4 × 50 m smooth freestyle with 20 s rest. Long strokes, and breathe out fully underwater.","200 m easy."],tot:"about 30 min"},
+  bike:{t:"45",u:"min",s:"Easy ride with spin-ups",st:["10 min easy.","5 × 30 s high cadence — light gear, legs spinning fast (100+ rpm if you can see it), 2 min easy between.","Ride easy to finish."],tot:"45 min"},
+  runq:{t:"8×1",u:"min",s:"Fartlek with your friend",st:["Run 10 min easy.","8 × 1 min at 5k effort, with 1 min easy jogging between.","10 min easy."],tot:"about 40 min"},
+  swimB:{t:"1,000",u:"m",s:"Endurance",st:["300 m easy.","4 × 100 m steady, 20 s rest.","4 × 50 m drill of your choice.","100 m easy."],tot:"about 30 min"},
+  brick:{title:"First brick",t:"45+10",u:"min",s:"easy ride → easy run",st:["Ride 45 min easy.","Change into running shoes as quickly as you can — that's transition practice.","Run 10 min easy straight off the bike. Short, quick steps for the first few minutes."],tot:"about 60 min"},
+  long:{km:8,s:"easy, with the group"}},
+ {n:3,phase:"Base",pct:.725,sets:3,
+  note:"Base. Christmas week: if a session has to go, drop Monday's swim first, never the brick.",
+  swimA:{t:"1,100",u:"m",s:"Technique",st:["300 m easy.","8 × 25 m drills with 20 s rest: fingertip drag and catch-up.","6 × 50 m freestyle breathing every 3 strokes (both sides), 20 s rest.","200 m easy."],tot:"about 35 min"},
+  bike:{t:"50",u:"min",s:"Easy ride with spin-ups",st:["10 min easy.","6 × 30 s high cadence, 2 min easy between.","Ride easy to finish."],tot:"50 min"},
+  runq:{t:"6×2",u:"min",s:"Intervals with your friend",st:["Run 10 min easy, then 3 strides.","6 × 2 min at 5k effort, with 90 s easy jogging between.","10 min easy."],tot:"about 45 min"},
+  swimB:{t:"1,200",u:"m",s:"Endurance",st:["300 m easy.","3 × 200 m steady, 30 s rest.","4 × 50 m a little quicker, 20 s rest.","100 m easy."],tot:"about 35 min"},
+  brick:{t:"60+10",u:"min",s:"ride with race-effort blocks → easy run",st:["Ride 15 min easy.","3 × 5 min at race effort, with 3 min easy between.","Ride easy to 60 min.","Run 10 min easy off the bike."],tot:"about 75 min"},
+  long:{km:10,s:"easy, with the group"}},
+ {n:4,phase:"Cutback",pct:.65,sets:2,
+  note:"Cutback. Less of everything so the first three weeks sink in. New Year's Day is a free pass.",
+  swimA:{t:"800",u:"m",s:"Technique, short",st:["200 m easy.","8 × 25 m drills, 20 s rest.","4 × 50 m smooth, 20 s rest.","100 m easy."],tot:"25 min"},
+  bike:{t:"40",u:"min",s:"Easy spin",st:["Ride 40 min easy, with 4 × 30 s high cadence somewhere in the middle."],tot:"40 min"},
+  runq:{t:"5",u:"km",s:"Easy run and strides",st:["Run 5 km easy.","6 × 20 s strides: build up, hold fast-but-relaxed, ease off. Walk back between each."],tot:"about 35 min"},
+  swimB:{t:"800",u:"m",s:"Continuous, easy",st:["Swim 800 m without stopping, at an easy pace. A quick breather at the wall is fine if you need one."],tot:"25 min"},
+  brick:{title:"Easy ride",t:"45",u:"min",s:"no run this week",st:["Ride 45 min easy. No run off the bike in a cutback week."],tot:"45 min"},
+  long:{km:8,s:"easy, cutback week"}},
+ {n:5,phase:"Base",pct:.75,sets:3,
+  note:"Benchmark week. Friday's 750 m time trial gives you your race pace in the water.",
+  swimA:{t:"1,200",u:"m",s:"Technique and breathing both sides",st:["300 m easy.","8 × 25 m drills: side kick and fingertip drag, 20 s rest.","6 × 50 m breathing every 3 strokes, 20 s rest.","4 × 50 m smooth, 20 s rest.","100 m easy."],tot:"about 35 min"},
+  bike:{t:"55",u:"min",s:"Easy ride with tempo",st:["15 min easy.","2 × 8 min tempo — moderately hard, short sentences only — with 4 min easy between.","Ride easy to finish."],tot:"55 min"},
+  runq:{t:"5×3",u:"min",s:"Intervals with your friend",st:["Run 10 min easy, then 3 strides.","5 × 3 min at 5k effort, with 2 min easy jogging between.","10 min easy."],tot:"about 45 min"},
+  swimB:{t:"750",u:"m TT",s:"Time trial: your race-pace benchmark",st:["300 m easy, then 4 × 25 m building speed.","Swim 750 m at the fastest pace you can hold evenly from start to finish. Note the time.","Divide the time by 7.5: that's your race pace per 100 m. Log the time below.","200 m easy."],tot:"about 35 min"},
+  brick:{t:"60+15",u:"min",s:"race-effort blocks → run",st:["Ride 15 min easy.","2 × 10 min at race effort, with 5 min easy between.","Ride easy to 60 min.","Run 15 min off the bike: the first 5 min at 5k effort, then easy."],tot:"about 80 min"},
+  long:{km:10,s:"easy, with the group"}},
+ {n:6,phase:"Build",pct:.775,sets:3,
+  note:"Build. The Saturday brick and Thursday run get race-specific; everything else stays easy.",
+  swimA:{t:"1,200",u:"m",s:"Technique and sighting",st:["300 m easy.","6 × 25 m drills, 20 s rest.","6 × 50 m with sighting, 20 s rest: every 6 strokes, lift your eyes just above the water and look forward, then turn to breathe as normal.","4 × 50 m smooth.","100 m easy."],tot:"about 35 min"},
+  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","3 × 8 min tempo, with 3 min easy between.","Ride easy to finish."],tot:"60 min"},
+  runq:{t:"5×1",u:"km",s:"1 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","5 × 1 km at 5k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 50 min"},
+  swimB:{t:"1,400",u:"m",s:"Race-pace 100s",st:["300 m easy.","4 × 50 m drill.","8 × 100 m at your 750 m race pace, 15 s rest.","200 m easy."],tot:"about 40 min"},
+  brick:{t:"70+15",u:"min",s:"race effort → run at 5k effort",st:["Ride 15 min easy.","3 × 8 min at race effort, with 3 min easy between.","Ride easy to 70 min.","Run 15 min off the bike: the first 10 min at 5k effort, then 5 min easy."],tot:"about 90 min"},
+  long:{km:11,s:"easy, with the group"}},
+ {n:7,phase:"Build",pct:.775,sets:3,
+  note:"Build. Same shape as last week, a little longer.",
+  swimA:{t:"1,300",u:"m",s:"Technique and sighting",st:["300 m easy.","6 × 25 m drills, 20 s rest.","8 × 50 m with sighting every 6 strokes, breathing every 3, 20 s rest.","4 × 50 m smooth.","100 m easy."],tot:"about 40 min"},
+  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","4 × 6 min tempo, with 2 min easy between.","Ride easy to finish."],tot:"60 min"},
+  runq:{t:"3×1.6",u:"km",s:"Mile repeats with your friend",st:["Run 10 min easy, then 3 strides.","3 × 1.6 km between 10k and 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 50 min"},
+  swimB:{t:"1,400",u:"m",s:"Race-pace 200s",st:["300 m easy.","4 × 200 m at race pace, 20 s rest.","4 × 50 m fast, 20 s rest.","200 m easy."],tot:"about 40 min"},
+  brick:{t:"75+20",u:"min",s:"race effort → run at 5k effort",st:["Ride 15 min easy.","2 × 15 min at race effort, with 5 min easy between.","Ride easy to 75 min.","Run 20 min off the bike: the first 10 min at 5k effort, then easy."],tot:"about 1 h 40"},
+  long:{km:12,s:"easy, with the group"}},
+ {n:8,phase:"Cutback",pct:.675,sets:2,
+  note:"Cutback, and a re-test: swim the 750 m again on Friday and compare it with week 5.",
+  swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","8 × 25 m drills.","4 × 50 m smooth.","200 m easy."],tot:"30 min"},
+  bike:{t:"45",u:"min",s:"Easy spin",st:["Ride 45 min easy, with 4 × 30 s high cadence."],tot:"45 min"},
+  runq:{t:"6",u:"km",s:"Easy run and strides",st:["Run 6 km easy.","6 × 20 s strides, walking back between each."],tot:"about 40 min"},
+  swimB:{t:"750",u:"m TT",s:"Time trial #2",st:["300 m easy, then 4 × 25 m building speed.","Swim 750 m as fast as you can hold evenly. Note the time and compare it with week 5.","200 m easy."],tot:"about 35 min"},
+  brick:{t:"60+10",u:"min",s:"easy ride → easy run",st:["Ride 60 min easy.","Run 10 min easy off the bike."],tot:"about 75 min"},
+  long:{km:9,s:"easy, cutback week"}},
+ {n:9,phase:"Build",pct:.775,sets:3,
+  note:"Build. Chinese New Year is on the weekend: if visiting gets in the way, do the brick on Friday and move Friday's swim to Monday.",
+  swimA:{t:"1,300",u:"m",s:"Technique and sighting",st:["300 m easy.","6 × 25 m drills.","8 × 50 m with sighting, 20 s rest.","4 × 50 m smooth.","100 m easy."],tot:"about 40 min"},
+  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","2 × 12 min tempo, with 4 min easy between.","Ride easy to finish."],tot:"60 min"},
+  runq:{t:"6×800",u:"m",s:"800s with your friend",st:["Run 10 min easy, then 3 strides.","6 × 800 m at 5k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 50 min"},
+  swimB:{t:"1,500",u:"m",s:"Race-pace 300s",st:["300 m easy.","3 × 300 m at race pace, 30 s rest.","4 × 50 m fast, 20 s rest.","200 m easy."],tot:"about 45 min"},
+  brick:{t:"75+20",u:"min",s:"above-race-effort blocks → run",st:["Ride 15 min easy.","5 × 4 min a little above race effort, with 2 min easy between.","Ride easy to 75 min.","Run 20 min off the bike: the first 10 min at 5k effort, then easy."],tot:"about 1 h 40"},
+  long:{km:12,s:"easy, with the group"}},
+ {n:10,phase:"Build",pct:.775,sets:2,
+  note:"First open-water swim this week. Always with a buddy, at a lifeguarded beach, in daylight.",
+  swimA:{t:"1,300",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting every 6 strokes, 20 s rest.","4 × 50 m smooth.","100 m easy."],tot:"about 40 min"},
+  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","3 × 8 min tempo, with 3 min easy between.","Ride easy to finish."],tot:"60 min"},
+  runq:{t:"4×1.2",u:"km",s:"1.2 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","4 × 1.2 km at 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 50 min"},
+  swimB:{open:1,t:"25",u:"min",s:"Open water #1 — with a buddy",st:["Go with a buddy to a lifeguarded beach (East Coast or Sentosa), early morning.","Swim 5 min easy along the shore to get used to the salt water and the chop.","4 × 3 min steady with sighting every 6–8 strokes — pick a building or tree on shore — with 1 min easy between.","Practise 2 beach starts: wade in, start swimming hard for 30 s, then settle into your rhythm.","Swim easy back.","No sea this week? Swim 1,500 m in the pool instead: 3 × 400 m continuous with sighting, 30 s rest."],tot:"about 30 min"},
+  brick:{t:"80+20",u:"min",s:"20 min race effort → run at 5k effort",st:["Ride 20 min easy.","20 min at race effort.","Ride easy to 80 min.","Run 20 min off the bike: the first 15 min at 5k effort, then easy."],tot:"about 1 h 45"},
+  long:{km:12,s:"easy, with the group"}},
+ {n:11,phase:"Build",pct:.75,sets:2,
+  note:"Last build week. The brick is the biggest of the block.",
+  swimA:{t:"1,400",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting, 20 s rest.","4 × 50 m fast, 20 s rest.","200 m easy."],tot:"about 40 min"},
+  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","2 × 15 min tempo, with 5 min easy between.","Ride easy to finish."],tot:"60 min"},
+  runq:{t:"3×2",u:"km",s:"2 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","3 × 2 km at 10k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 55 min"},
+  swimB:{open:1,t:"25",u:"min",s:"Open water #2 — with a buddy",st:["Lifeguarded beach, with a buddy, early morning.","5 min easy.","2 × 10 min at race effort with sighting every 6–8 strokes, 2 min easy between.","2 beach starts.","Easy to finish.","No sea? 1,500 m in the pool: 2 × 600 m at race pace with sighting, 1 min rest."],tot:"about 30 min"},
+  brick:{t:"90+20",u:"min",s:"2 × 20 min race effort → run",st:["Ride 20 min easy.","2 × 20 min at race effort, with 5 min easy between.","Ride easy to 90 min.","Run 20 min off the bike: the first 10 min at 5k effort, then easy."],tot:"about 1 h 55"},
+  long:{km:12,s:"easy, with the group"}},
+ {n:12,phase:"Cutback",pct:.675,sets:2,
+  note:"Cutback before the final push.",
+  swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","8 × 25 m drills.","4 × 50 m smooth.","200 m easy."],tot:"30 min"},
+  bike:{t:"45",u:"min",s:"Easy spin",st:["Ride 45 min easy, with 4 × 30 s high cadence."],tot:"45 min"},
+  runq:{t:"6",u:"km",s:"Easy run and strides",st:["Run 6 km easy.","6 × 20 s strides, walking back between each."],tot:"about 40 min"},
+  swimB:{t:"1,000",u:"m",s:"Easy-steady, pool",st:["Swim 1,000 m continuously, easy for the first half and steady for the second."],tot:"30 min"},
+  brick:{t:"60+10",u:"min",s:"easy ride → easy run",st:["Ride 60 min easy.","Run 10 min easy off the bike."],tot:"about 75 min"},
+  long:{km:9,s:"easy, cutback week"}},
+ {n:13,phase:"Peak",pct:.75,sets:2,
+  note:"Race rehearsal on Saturday: the full distance on the bike and run, in race kit, after your race breakfast, with transition set up like race day.",
+  swimA:{t:"1,400",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting, 20 s rest.","4 × 50 m fast.","200 m easy."],tot:"about 40 min"},
+  bike:{t:"50",u:"min",s:"Easy ride with spin-ups",st:["Ride 50 min easy, with 5 × 30 s high cadence. Keep it easy — Saturday is the rehearsal."],tot:"50 min"},
+  runq:{t:"5×1",u:"km",s:"1 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","5 × 1 km at 5k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 50 min"},
+  swimB:{open:1,t:"750",u:"m",s:"Open water: race distance",st:["Lifeguarded beach, with a buddy.","5 min easy.","Swim 750 m continuously at race effort, sighting every 6–8 strokes. Your watch or a known course helps; otherwise swim about your 750 m time.","Easy to finish."],tot:"about 30 min"},
+  brick:{title:"Race rehearsal",t:"20+5",u:"km",s:"full bike and run at race effort",st:["Set up a mini transition: bike, helmet, shoes, race belt and a towel.","Ride 20 km at race effort.","Change into running shoes as fast as you can, and time it.","Run 5 km: the first 2 km steady, the last 3 km at 5k effort.","Eat and drink exactly what you will on race day."],tot:"about 75 min"},
+  long:{km:8,s:"easy, the day after the rehearsal"}},
+ {n:14,phase:"Peak",pct:.725,sets:2,
+  note:"Last big week. Practise transitions until they're boring.",
+  swimA:{t:"1,300",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting.","4 × 50 m fast.","100 m easy."],tot:"about 40 min"},
+  bike:{t:"50",u:"min",s:"Easy ride with tempo",st:["15 min easy.","3 × 5 min tempo, with 3 min easy between.","Ride easy to finish."],tot:"50 min"},
+  runq:{t:"3×1.6",u:"km",s:"Mile repeats at 5k pace",st:["Run 10 min easy, then 3 strides.","3 × 1.6 km at 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 50 min"},
+  swimB:{open:1,t:"25",u:"min",s:"Open water: starts and sighting",st:["Lifeguarded beach, with a buddy.","5 min easy.","2 × 10 min at race effort with sighting, 2 min easy between.","3 practice starts: hard for 30 s, then settle.","Easy to finish."],tot:"about 30 min"},
+  brick:{t:"60+15",u:"min",s:"race effort → run at race effort",st:["Ride 20 min easy, then 20 min at race effort, then easy to 60 min.","Practise the bike-to-run change three times before you go: rack, helmet off, shoes on, go.","Run 15 min off the bike at 5k effort."],tot:"about 80 min"},
+  long:{km:10,s:"easy, with the group"}},
+ {n:15,phase:"Taper",pct:.675,sets:1,lnote:"Last lift before the race: light, crisp, nowhere near failure. Skip the Nordics this week.",
+  note:"Taper. About half the volume, same sharp efforts. Resist adding anything.",
+  swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","6 × 25 m drills.","4 × 50 m at race pace.","100 m easy."],tot:"30 min"},
+  bike:{t:"40",u:"min",s:"Easy ride with race-effort minutes",st:["Ride 40 min easy, with 4 × 1 min at race effort in the middle."],tot:"40 min"},
+  runq:{t:"4×800",u:"m",s:"Sharpener",st:["Run 10 min easy, then 3 strides.","4 × 800 m at 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 40 min"},
+  swimB:{open:1,t:"20",u:"min",s:"Open water, easy",st:["Lifeguarded beach, with a buddy.","20 min easy, with 4 × 1 min at race effort.","Practise one start."],tot:"20 min"},
+  brick:{t:"45+10",u:"min",s:"short and sharp",st:["Ride 45 min easy, with 2 × 5 min at race effort.","Run 10 min off the bike, the first 5 min at 5k effort."],tot:"about 60 min"},
+  long:{km:8,s:"easy, last long run"}},
+ {n:16,phase:"Race",pct:.60,sets:1,
+  note:"Race week. Short, sharp and rested. Check the bike on Wednesday so there's time to fix anything.",
+  swimA:{t:"20",u:"min",s:"Easy swim + 4 fast 25s",st:["Swim 20 min easy, with 4 × 25 m fast in the middle."],tot:"20 min"},
+  bike:{t:"30",u:"min",s:"Easy spin + 3 race-effort minutes",st:["Ride 30 min easy, with 3 × 1 min at race effort.","Check tyres, brakes and gears afterwards."],tot:"30 min"},
+  runq:{t:"20",u:"min",s:"Easy jog + strides",st:["Jog 20 min easy, then 4 strides."],tot:"25 min"},
+  swimB:{open:1,t:"15",u:"min",s:"Easy swim, in the sea if you can",st:["15 min easy, with a buddy. A few strokes of sighting, then out."],tot:"15 min"}}];
+// Logged triathlon slots: [slot, label, unit, CSV category, planned day]
+const TRI_SLOTS=[["swimA","Technique swim","m","Swim","Mon"],["cf","CrossFit","","CrossFit","Tue"],["bike","Easy ride","km","Bike","Wed"],
+ ["runq","Run session","km","Run","Thu"],["swimB","Swim","m","Swim","Fri"],["brick","Brick — bike","km","Bike","Sat"],
+ ["brickrun","Brick — run","km","Run","Sat"],["long","Long run","km","Run","Sun"],["race","MetaSprint race","km","Run","Sun"]];
+const TRI_PHASE={Recovery:"var(--green)",Base:"#a3a3a3",Build:"var(--amber)",Cutback:"var(--green)",Peak:"var(--red)",Taper:"var(--green)",Race:"var(--red)"};
+const TRI_SCHED=[
+ ["Mon","Swim · technique","plus mobility","swimA","var(--sky)"],
+ ["Tue","Strength","one full-body session","lift","var(--amber)"],
+ ["Wed","Bike · easy","easy ride","bike","var(--green)"],
+ ["Thu","Run","the hard run, with your friend","runq","var(--sky)"],
+ ["Fri","Swim","swim fitness","swimB","var(--sky)"],
+ ["Sat","Brick","ride, then run off the bike","brick","var(--red)"],
+ ["Sun","Long run","easy, with the group","long","var(--green)"]];
+function triTue(n){for(var k=n;k>=1;k--){if(S.tue&&S.tue[k])return S.tue[k];}return "lift";}
+function triSched(n){var w=TRI_WEEKS[n-1],last=n===TRI_WEEKS.length;return TRI_SCHED.map(function(s){
+  if(s[0]==="Tue"&&last)return ["Tue","Rest","race week",null,"var(--ink4)"];
+  if(s[0]==="Tue"&&triTue(n)==="cf")return ["Tue","CrossFit","class, plus Nordics and Copenhagen","cf","var(--amber)"];
+  if(s[0]==="Mon"&&n===1)return ["Mon","Swim · easy","plus gentle mobility","swimA","var(--sky)"];
+  if(s[0]==="Thu"&&n===1)return ["Thu","Run · easy","only if your legs feel normal","runq","var(--green)"];
+  if(s[0]==="Fri"&&w.swimB.open)return ["Fri","Swim · open water","with a buddy","swimB","var(--sky)"];
+  if(s[0]==="Sat"&&last)return ["Sat","Rest","pack the bag, check the bike",null,"var(--ink4)"];
+  if(s[0]==="Sat"&&w.brick.title)return ["Sat",w.brick.title,w.brick.s,"brick",w.brick.title==="Race rehearsal"?"var(--red)":"var(--green)"];
+  if(s[0]==="Sun"&&last)return ["Sun","RACE — MetaSprint","sprint triathlon","long","var(--red)"];
+  return s;});}
+const TRI_MAINS=[MAINS[0],MAINS[1],OHP,MAINS[2]];
+const TRI_ACC=[
+ ["Pull-up","3 sets × 6–8 reps","BW · band-assist or +load to fit reps · this is your swim pull"],
+ ["Single-arm dumbbell row","3 sets × 8 reps each arm","~16–22kg · one hand and knee on a bench, pull to the hip"],
+ ["Nordic hamstring curl","2 sets × 5 reps","BW · kneel with your heels held down (heavy bar or a partner), lower your body as slowly as you can, catch yourself with your hands, push back up. Too hard? 2 × 3"],
+ ["Single-leg calf raise","3 sets × 12 reps each leg","BW, then hold a dumbbell · achilles and calf insurance"],
+ ["Copenhagen plank","2 sets × 20 s each side","knee on a bench (short lever) first, then the foot · inner thigh and groin"],
+ ["Band external rotation","2 sets × 15 reps each arm","light band, elbow tucked at your side · protects the shoulder for swimming"]];
+// Shared "how it should feel" and "why" for each triathlon session.
+const TRI_HOW={
+ swimA:{feel:"Unhurried. Drills are slow and precise; this is practice, not a workout.",
+   why:"Swimming is the most technique-limited of the three sports: early on, a better stroke saves more time than extra fitness does. Drills work best when you are fresh, so they come first.",
+   drills:"Catch-up: one hand waits out in front until the other arrives. Fingertip drag: drag your fingertips along the surface as the arm comes forward, keeping the elbow high. Side kick: on your side, bottom arm stretched forward, kick and breathe — it teaches balance."},
+ bike:{feel:"Easy means full sentences. Tempo is moderately hard: short sentences, steady. High cadence is quick, light legs, not hard pushing.",
+   why:"Builds your aerobic engine with almost no impact, so your legs recover from running while you get fitter. A stationary or spin bike is fine for this one."},
+ runq:{feel:"5k effort: hard, a word or two. 10k pace: hard but controlled. Every rep the same pace — if the last one is much slower, you started too fast.",
+   why:"Your one hard run of the week, with your friend. The 5 km in a sprint triathlon is run close to 5k effort on tired legs, and this is where that speed comes from."},
+ swimB:{feel:"Race pace is strong but steady, the pace you could hold for 750 m. Every rep should be the same pace.",
+   why:"Repeats at race pace with short rests teach you to hold your 750 m pace. From week 10 it moves to the sea, because open water — waves, no wall, no black line — is a different skill from pool swimming."},
+ brick:{feel:RE+" The first few minutes of the run will feel heavy and strange; short, quick steps, and it settles.",
+   why:"Your key session of the week. Running straight after riding feels awkward for everyone; practising it makes the race's bike-to-run change familiar, and the bike efforts build the leg strength the 20 km needs."},
+ long:{feel:"Conversational the whole way.",
+   why:"Keeps the endurance from your half-marathon block while you train for a 5 km run. It stays short and easy so it doesn't take energy from the brick or the Thursday run."}};
+const TRI_RACE_HOW={steps:["Rack your bike early and lay out transition: helmet on the bars, shoes, race belt, towel. Walk the route from the swim exit to your bike and from your bike to the run exit.","Warm up with 5 min easy jogging and a few minutes of easy swimming if it's allowed.","Swim: start at the side or the back, settle into your rhythm, and sight every 6–8 strokes. Don't race the first 100 m.","Bike: helmet on and buckled before you touch the bike. Ease in for 2–3 min, then hold race effort. Drink early.","Run: short, quick steps for the first kilometre while your legs come round, then 5k effort to the finish."],
+  feel:"Controlled in the water, strong on the bike, and everything you have left on the run.",
+  why:"Sixteen weeks of work. Swim smooth, ride steady, run hard."};
+const TRI_LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big 3 (curl-up, side plank, bird dog).","Do the ramp sets before each main lift's working sets.","Squat and bench: work up to one top set of 3 that leaves about two reps in the tank, then the lighter back-off sets of 5.","Rest 2–3 min between sets of the main lifts and 60–90 s between accessory sets.","Never go to failure: end every set with 1–2 good reps left.","Nordics: start with 2 × 3 if 5 is too many; most of the benefit comes from lowering slowly."],
+  feel:"Heavy but crisp. You should leave feeling you could do more.",
+  why:"Heavy, low-rep strength work makes running and cycling cheaper: you use less energy at the same pace. High-rep circuits don't do the same. December and January are when it can build; from February it drops to 2 sets so it doesn't take energy from the bike and run. The Nordics and Copenhagen planks are there because strains are your injury pattern.",
+  total:"about 60–70 min"};
+
 const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},fri:{},indoor:{},how:{},ref:false,block:null,view:"new",oweek:8};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},fri:{},tue:{},indoor:{},how:{},ref:false,block:null,view:"new",oweek:8,tweek:1};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
-S.mob=S.mob||{};S.moves=S.moves||{};S.fri=S.fri||{};S.indoor=S.indoor||{};S.how=S.how||{};
-if(S.view!=="old")S.view="new";S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
+S.mob=S.mob||{};S.moves=S.moves||{};S.fri=S.fri||{};S.tue=S.tue||{};S.indoor=S.indoor||{};S.how=S.how||{};
+if(S.view!=="old"&&S.view!=="tri")S.view="new";S.tweek=Math.min(Math.max(Number(S.tweek)||1,1),TRI_WEEKS.length);S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
 function dOnly(d){d.setHours(0,0,0,0);return d;}
@@ -463,8 +672,16 @@ function currentWeek(){
   return Math.min(Math.max(Math.floor(diff/7)+1,1),WEEKS.length);
 }
 function todayDay(){return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];}
+function triStart(n){var d=new Date(TRI_START+"T00:00:00");d.setDate(d.getDate()+(n-1)*7);return d;}
+function triRange(n){var a=triStart(n),b=new Date(a);b.setDate(b.getDate()+6);return fmtD(a)+" – "+fmtD(b);}
+function triStarted(){return dOnly(new Date())>=new Date(TRI_START+"T00:00:00");}
+function currentTriWeek(){var diff=Math.floor((dOnly(new Date())-new Date(TRI_START+"T00:00:00"))/86400000);
+  return Math.min(Math.max(Math.floor(diff/7)+1,1),TRI_WEEKS.length);}
+function daysToTri(){return Math.round((new Date(TRI.date+"T00:00:00")-dOnly(new Date()))/86400000);}
 // New block: reset the selected week, keep every old log for export.
 if(S.block!==BLOCK){S.block=BLOCK;S.week=currentWeek();S.shift28=true;persist();}
+// The day after the half, the app opens on the triathlon block (once; the strip still reaches every week).
+if(triStarted()&&!S.triAuto){S.view="tri";S.tweek=currentTriWeek();S.triAuto=true;persist();}
 // During the haze the dates briefly ran from 21 Sep, and logs from 11 Oct were entered one week tab ahead.
 // With the block back on 28 Sep, everything from week 3 on moves back one week (week 3 merges into week 2,
 // where week 2's own entries win). Runs once; the previous data is kept for Undo.
@@ -492,13 +709,17 @@ const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"
 function ramp(W){if(!W)return[];const out=["bar × 8"];let last=20;[[0.5,5],[0.7,3],[0.85,2]].forEach(function(s){const x=r25(W*s[0]);if(x>20&&x<W&&x!==last){out.push(fmt(x)+" × "+s[1]);last=x;}});return out;}
 function parseSets(p){var m=String(p).match(/^\s*(\d+)\s*sets?/i);return m?+m[1]:1;}
 function parseReps(p){var m=String(p).match(/[×x]\s*(\d+)/);return m?+m[1]:0;}
-const K=()=>S.view==="old"?String(S.oweek):BLOCK+S.week;
+const K=()=>S.view==="old"?String(S.oweek):S.view==="tri"?TBLOCK+S.tweek:BLOCK+S.week;
+// The week being shown: a number in the half-marathon block, "t<n>" in the triathlon block (runs and day moves use it).
+function curN(){return S.view==="tri"?"t"+S.tweek:S.week;}
+function curW(){return S.view==="tri"?TRI_WEEKS[S.tweek-1]:WEEKS[S.week-1];}
+function curMains(){return S.view==="tri"?TRI_MAINS:mainsFor(S.week);}
 function fmtSet(st){if((st.w==null||st.w==="")&&(st.r==null||st.r===""))return null;return (st.w!==""&&st.w!=null?st.w:"?")+"×"+(st.r!==""&&st.r!=null?st.r:"?");}
-function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return rm?r25(rm*(m.fixed!=null?m.fixed:(lPct(w)+(m.adj||0)))):0;}
-function liftTop(m){var rm=Number(S.oneRMs[m.rm]),w=WEEKS[S.week-1];return (rm&&m.top)?r25(rm*(lPct(w)+m.topAdj)):0;}
+function liftW(m){var rm=Number(S.oneRMs[m.rm]),w=curW();return rm?r25(rm*(m.fixed!=null?m.fixed:(lPct(w)+(m.adj||0)))):0;}
+function liftTop(m){var rm=Number(S.oneRMs[m.rm]),w=curW();return (rm&&m.top)?r25(rm*(lPct(w)+m.topAdj)):0;}
 function bigW(m){return m.top?liftTop(m):liftW(m);}
 function pctStr(p){return Math.round(p*100)+"%";}
-function liftSpec(m){var w=WEEKS[S.week-1],n=lSets(w),p=lPct(w);
+function liftSpec(m){var w=curW(),n=lSets(w),p=lPct(w);
   if(m.top){var bo=Math.max(n-1,0);return "Top 1 × "+m.top+" @ "+pctStr(p+m.topAdj)+(bo?" · then "+bo+" × "+m.reps+" @ "+pctStr(p):"");}
   return n+" × "+m.reps+" @ "+pctStr(m.fixed!=null?m.fixed:p+(m.adj||0));}
 
@@ -508,7 +729,7 @@ const OLD_DAY={squat:"Thu",bench:"Thu",deadlift:"Tue",ohp:"Tue"};
 const OLD_ACC={
  Thu:["Chin-up or lat pulldown","Face pulls","Rear-delt raise","Pallof press","Ab wheel / hanging knee raise"],
  Tue:["Barbell row","Bulgarian split squat (paused)","Cuff external rotation","Pull-up","Single-arm suitcase carry","Hanging knee raise"]};
-function isLegacyKey(key){return key.indexOf(BLOCK)!==0;}
+function isLegacyKey(key){return key.indexOf(BLOCK)!==0&&key.indexOf(TBLOCK)!==0;}
 function legacyLabel(key){
   var m=key.match(/^(\d+):acc:(\w+):(\d+)$/);
   if(m){var list=OLD_ACC[m[2]]||[];return{week:+m[1],day:m[2],name:list[+m[3]]||("Accessory "+(+m[3]+1)),acc:true};}
@@ -614,24 +835,28 @@ function oldSessionText(){
 // ---- rewards: everything clocked in, across both blocks ----
 function num(v){var n=parseFloat(String(v==null?"":v).replace(",","."));return isNaN(n)?0:n;}
 function stats(){
-  var st={sessions:0,runs:0,km:0,longest:0,swims:0,swimM:0,cf:0,cardio:0,sets:0,kg:0,lifts:0,streak:0,best:0,mobility:0};
+  var st={sessions:0,runs:0,km:0,longest:0,swims:0,swimM:0,rides:0,bikeKm:0,cf:0,cardio:0,sets:0,kg:0,lifts:0,streak:0,best:0,mobility:0};
   Object.keys(S.sessions).forEach(function(k){if(S.sessions[k])st.sessions++;});
   Object.keys(S.runs).forEach(function(k){var r=S.runs[k]||{};if(!(r.km||r.t||r.min||r.note))return;
     if(/:cf$/.test(k)){if(r.min||r.note)st.cf++;return;}
-    if(/:cardio$/.test(k)){st.cardio++;return;}
-    if(/:swim$/.test(k)){st.swims++;st.swimM+=num(r.km);}else{st.runs++;var d=num(r.km);st.km+=d;if(/:long$/.test(k)&&d>st.longest)st.longest=d;}});
+    if(/:(cardio|xt)$/.test(k)){st.cardio++;return;}
+    if(/:(bike|brick)$/.test(k)){st.rides++;st.bikeKm+=num(r.km);return;}
+    if(/:swim[AB]?$/.test(k)){st.swims++;st.swimM+=num(r.km);}else{st.runs++;var d=num(r.km);st.km+=d;if(/:long$/.test(k)&&d>st.longest)st.longest=d;}});
   var liftKeys={};
   Object.keys(S.logs).forEach(function(k){var sets=(S.logs[k]||{}).sets||[];sets.forEach(function(x){if(!x||!fmtSet(x))return;st.sets++;var w=num(x.w),r=num(x.r);if(w&&r)st.kg+=w*r;
-    var wk=k.indexOf(BLOCK)===0?BLOCK+k.slice(BLOCK.length).split(":")[0]:k.split(":")[0];liftKeys[wk]=1;});});
+    liftKeys[k.split(":")[0]]=1;});});
   st.lifts=Object.keys(liftKeys).length;
   // a mobility session counts once 75% of that week's routine is ticked
   st.mobility=WEEKS.filter(function(w){if(w.n<MOB_FROM)return false;var n=0,c=0;
-    MOB.forEach(function(m,i){if(w.n===RACE_WEEK&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
+    MOB.forEach(function(m,i){if(w.n===RACE_WEEK&&m[5])return;n++;if(S.mob[BLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length+
+    TRI_WEEKS.filter(function(w){var n=0,c=0;
+    MOB.forEach(function(m,i){if(w.n===TRI_WEEKS.length&&m[5])return;n++;if(S.mob[TBLOCK+w.n+":mob:"+i])c++;});return c>=Math.ceil(n*0.75);}).length;
   // a week "counts" with 4+ sessions ticked; streak = consecutive counted weeks ending at the latest one
   var done=function(pre){return SCHED.filter(function(x){return !!S.sessions[pre+x[0]];}).length>=4;};
-  var seq=OLD_WEEKS.map(function(w){return done(w.n+":");}).concat(WEEKS.map(function(w){return done(BLOCK+w.n+":");}));
+  var seq=OLD_WEEKS.map(function(w){return done(w.n+":");}).concat(WEEKS.map(function(w){return done(BLOCK+w.n+":");}))
+    .concat(triStarted()?TRI_WEEKS.slice(0,currentTriWeek()).map(function(w){return done(TBLOCK+w.n+":");}):[]);
   var run=0;seq.forEach(function(d){run=d?run+1:0;if(run>st.best)st.best=run;});
-  var cw=currentWeek(),i=OLD_WEEKS.length+cw-1;if(!seq[i])i--;      // this week may still be in progress
+  var i=seq.length-1;if(!triStarted())i=OLD_WEEKS.length+currentWeek()-1;if(!seq[i])i--;      // this week may still be in progress
   while(i>=0&&seq[i]){st.streak++;i--;}
   return st;}
 const BADGES=[
@@ -640,17 +865,18 @@ const BADGES=[
  ["50 km run","km",50],["100 km run","km",100],["200 km run","km",200],
  ["Long run 15 km+","longest",15],["Long run 19 km — peak","longest",19],["21.1 km — the half","longest",21.1],
  ["First mobility session","mobility",1],["Four mobility Mondays","mobility",4],["Every Monday — "+(RACE_WEEK-MOB_FROM+1)+" sessions","mobility",RACE_WEEK-MOB_FROM+1],
+ ["First ride","rides",1],["Ten rides","rides",10],["100 km ridden","bikeKm",100],["Ten swims","swims",10],["25 swims","swims",25],
  ["10 tonnes lifted","kg",10000],["25 tonnes lifted","kg",25000],["50 tonnes lifted","kg",50000]];
-function fmtBig(v,k){return k==="kg"?(v>=1000?(Math.round(v/100)/10)+" t":Math.round(v)+" kg"):k==="km"||k==="longest"?(Math.round(v*10)/10)+" km":String(v);}
+function fmtBig(v,k){return k==="kg"?(v>=1000?(Math.round(v/100)/10)+" t":Math.round(v)+" kg"):k==="km"||k==="longest"||k==="bikeKm"?(Math.round(v*10)/10)+" km":String(v);}
 function rewardHTML(){
   var st=stats(),earned=[],next=null;
   BADGES.forEach(function(b){if(st[b[1]]>=b[2])earned.push(b);else if(!next||(b[2]-st[b[1]])/b[2]<(next[2]-st[next[1]])/next[2])next=b;});
-  if(!st.sessions&&!st.runs&&!st.sets&&!st.swims&&!st.cf&&!st.cardio)return "";
+  if(!st.sessions&&!st.runs&&!st.sets&&!st.swims&&!st.cf&&!st.cardio&&!st.rides)return "";
   var tile=function(v,l){return '<div class="rt2"><div class="rv">'+v+'</div><div class="rl">'+l+'</div></div>';};
-  return '<div class="card rew"><div class="lbl">Clocked in · both blocks</div>'+
+  return '<div class="card rew"><div class="lbl">Clocked in · every block</div>'+
     '<div class="rgrid">'+tile(st.sessions,"sessions")+tile(st.streak+(st.best>st.streak?'<small>/'+st.best+'</small>':''),"week streak")+
     tile(Math.round(st.km),"km run")+tile(st.kg>=1000?(Math.round(st.kg/100)/10)+"t":Math.round(st.kg),"kg lifted")+'</div>'+
-    '<div class="rsub">'+st.runs+' runs · longest '+fmtBig(st.longest,"km")+' · '+st.lifts+' lift days · '+st.sets+' sets'+(st.swims?' · '+st.swims+' swims':'')+(st.cf?' · '+st.cf+' CrossFit':'')+(st.cardio?' · '+st.cardio+' indoor cardio':'')+(st.mobility?' · '+st.mobility+' mobility':'')+'</div>'+
+    '<div class="rsub">'+st.runs+' runs · longest '+fmtBig(st.longest,"km")+' · '+st.lifts+' lift days · '+st.sets+' sets'+(st.swims?' · '+st.swims+' swims':'')+(st.rides?' · '+st.rides+' rides · '+Math.round(st.bikeKm)+' km on the bike':'')+(st.cf?' · '+st.cf+' CrossFit':'')+(st.cardio?' · '+st.cardio+' easy cardio':'')+(st.mobility?' · '+st.mobility+' mobility':'')+'</div>'+
     (earned.length?'<div class="badges">'+earned.map(function(b){return '<span class="badge2">✓ '+b[0]+'</span>';}).join("")+'</div>':'')+
     (next?'<div class="nextb"><span>Next: <b>'+next[0]+'</b></span><span class="p">'+fmtBig(st[next[1]],next[1])+' / '+fmtBig(next[2],next[1])+'</span></div>'+
       '<div class="bar"><div style="width:'+Math.min(100,Math.round(st[next[1]]/next[2]*100))+'%"></div></div>':'')+'</div>';}
@@ -666,13 +892,17 @@ function stripHTML(){
     return '<button class="wk old '+(a?'active':'')+'" data-oweek="'+wk.n+'" title="Strength block · week '+wk.n+'"><span>'+wk.n+'</span>'+
       '<span class="dot" style="background:'+(a?'#0a0a0a':(has?OLD_PHASE[wk.phase]:'#2a2a2a'))+'"></span></button>';}).join("");
   var cur=WEEKS.map(function(wk){var a=S.view==="new"&&wk.n===S.week;
-    return '<button class="wk '+(a?'active':'')+' '+(wk.n===currentWeek()?'now':'')+'" data-week="'+wk.n+'"><span>'+wk.n+'</span>'+
+    return '<button class="wk '+(a?'active':'')+' '+(wk.n===currentWeek()&&!triStarted()?'now':'')+'" data-week="'+wk.n+'"><span>'+wk.n+'</span>'+
       '<span class="dot" style="background:'+(a?'#0a0a0a':PHASE[wk.phase])+'"></span></button>';}).join("");
-  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 28 Sep">»</div>'+cur+'</div>';}
+  var tri=TRI_WEEKS.map(function(wk){var a=S.view==="tri"&&wk.n===S.tweek;
+    return '<button class="wk tri '+(a?'active':'')+' '+(triStarted()&&wk.n===currentTriWeek()?'now':'')+'" data-tweek="'+wk.n+'" title="Triathlon block · week '+wk.n+'"><span>'+wk.n+'</span>'+
+      '<span class="dot" style="background:'+(a?'#0a0a0a':TRI_PHASE[wk.phase])+'"></span></button>';}).join("");
+  return '<div class="strip" id="strip">'+old+'<div class="wkdiv" title="Program change — 28 Sep">»</div>'+cur+
+    '<div class="wkdiv" title="Triathlon block — from 7 Dec">»</div>'+tri+'</div>';}
 function schedHTML(rows,pre,isNow,td,raceSun){
   return '<div class="sched">'+rows.map(function(s){
     var d=s[0],src=s[6]||d,done=!!S.sessions[pre+src],label=s[1],sub=s[2],fixed=raceSun&&src==="Sun";
-    if(fixed){label="RACE — 21.1 km";sub="you have done the work";}
+    if(fixed){label=raceSun===true?"RACE — 21.1 km":raceSun;sub="you have done the work";}
     var tag=src!==d?'<span class="mvtag">from '+src+'</span>':'';if(src!==d)sub="";   // its note was written for the original day
     if(arranging)return '<button class="srow arr'+(picked===d?' pick':'')+(fixed?' fixed':'')+'" '+(fixed?'disabled':'data-pick="'+d+'"')+'>'+
       '<span class="grip">'+(fixed?'•':'⇅')+'</span><span class="d">'+d+'</span><span class="a" style="color:'+s[5]+'">'+label+'</span>'+tag+'</button>';
@@ -748,7 +978,10 @@ function sessionText(){
   if(S.week>=MOB_FROM){var mi=mobItems(),md=mi.filter(function(x){return S.mob[K()+":mob:"+x.i];}).length;
     out+="\n\nMOBILITY ("+mobDay(S.week)+")\n  ~"+mi.reduce(function(a,x){return a+x.m[4];},0)+" min · hips, hamstrings, calves · "+md+"/"+mi.length+" done";}
   if(ovr(S.week).sched||moveMap(S.week))out+="\n\nTHIS WEEK ("+(moveMap(S.week)?"days moved":"rescheduled for haze")+")"+weekRows(S.week).map(function(s){return "\n  "+s[0]+" · "+s[1]+(s[5]!==s[0]?" (from "+s[5]+")":(s[2]?" — "+s[2]:""));}).join("");
-  else out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===RACE_WEEK)?"":"\n  Sat · light and technical — long run tomorrow");
+  else if(S.week===BOX_END-1)out+="\n\nBOXING\n  Tue · last class — membership ends";
+  else if(S.week<BOX_END)out+="\n\nBOXING"+(S.week<MOB_FROM?"\n  Mon · technical, lighter":"")+"\n  Wed · full session"+((S.week<MOB_FROM||S.week===RACE_WEEK)?"":"\n  Sat · light and technical — long run tomorrow");
+  if(S.week>=BOX_END){var xl2=S.runs[S.week+":xt"]||{},xb=[xl2.min?xl2.min+" min":"",xl2.note||""].filter(Boolean);
+    out+="\n\nEASY BIKE OR SWIM\n  "+dispDay(S.week,"Wed")+" · "+(S.week===RACE_WEEK?"20":"30–40")+" min easy"+(xb.length?" · logged "+xb.join(" / "):"");}
   out+="\n\nSTRENGTH ("+liftDay(S.week)+")";
   mainsFor(S.week).forEach(function(m){
     var B=bigW(m),lg=S.logs[K()+":"+m.k]||{},sets=lg.sets||[],parts=[];
@@ -766,8 +999,8 @@ function fullLogText(){
   var out="Hybrid Training — training log",found=false;
   for(var wk=1;wk<=WEEKS.length;wk++){
     var W=WEEKS[wk-1],ln="";
-    [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"],["cardio","Indoor cardio"],["cf","CrossFit"]].forEach(function(s){
-      var lg=S.runs[wk+":"+s[0]]||{},bits=[];if(s[0]==="cf"){if(lg.min)bits.push(lg.min+" min");if(lg.note)bits.push(lg.note);}
+    [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"],["cardio","Indoor cardio"],["cf","CrossFit"],["xt","Easy bike or swim"]].forEach(function(s){
+      var lg=S.runs[wk+":"+s[0]]||{},bits=[];if(s[0]==="cf"||s[0]==="xt"){if(lg.min)bits.push(lg.min+" min");if(lg.note)bits.push(lg.note);}
       if(lg.km)bits.push(lg.km+(s[0]==="swim"?" m":" km"));if(lg.t)bits.push(lg.t);
       if(bits.length)ln+="\n    "+s[1]+": "+bits.join(" / ");});
     mainsFor(wk).forEach(function(m){
@@ -780,6 +1013,15 @@ function fullLogText(){
       if(parts.length)ln+="\n    "+a[0]+": "+parts.join(", ");});
     if(ln){found=true;out+="\n\nWeek "+wk+" · "+W.phase+" · "+weekRange(wk)+ln;}
   }
+  for(var tw=1;tw<=TRI_WEEKS.length;tw++){var TW=TRI_WEEKS[tw-1],tl="";
+    TRI_SLOTS.forEach(function(s){var lg=S.runs["t"+tw+":"+s[0]]||{},bits=[];
+      if(lg.km)bits.push(lg.km+" "+s[2]);if(lg.t)bits.push(lg.t);if(lg.min)bits.push(lg.min+" min");if(lg.note)bits.push(lg.note);
+      if(bits.length)tl+="\n    "+s[1]+": "+bits.join(" / ");});
+    TRI_MAINS.forEach(function(m){var parts=((S.logs[TBLOCK+tw+":"+m.k]||{}).sets||[]).map(function(st){return st&&fmtSet(st);}).filter(Boolean);
+      if(parts.length)tl+="\n    "+m.name+": "+parts.join(", ");});
+    TRI_ACC.forEach(function(a,idx){var parts=((S.logs[TBLOCK+tw+":acc:"+idx]||{}).sets||[]).map(function(st){return st&&fmtSet(st);}).filter(Boolean);
+      if(parts.length)tl+="\n    "+a[0]+": "+parts.join(", ");});
+    if(tl){found=true;out+="\n\nTriathlon week "+tw+" · "+TW.phase+" · "+triRange(tw)+tl;}}
   var lt=legacyText();if(lt){out+="\n\n"+lt;found=true;}
   return found?out:"Nothing logged yet.";
 }
@@ -805,15 +1047,26 @@ function buildCSV(){
       sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Accessory",wk,liftDay(wk),a[0],si+1,st.w||"",st.r||"","","","",key]);});});
   }
   Object.keys(S.sessions).forEach(function(key){if(S.sessions[key])rows.push(["Session","","","","","","","","","yes",key]);});
-  Object.keys(S.mob).forEach(function(key){if(!S.mob[key])return;var p=key.slice(BLOCK.length).split(":"),it=MOB[+p[2]];
-    rows.push(["Mobility",p[0],mobDay(+p[0]),it?it[1]:"","","","","","","yes",key]);});
-  for(var cw=1;cw<=WEEKS.length;cw++){var cl=S.runs[cw+":cf"]||{};if(cl.min||cl.note)rows.push(["CrossFit",cw,dispDay(cw,"Fri"),cl.note||"","","","","",cl.min||"","",cw+":cf"]);}
+  Object.keys(S.mob).forEach(function(key){if(!S.mob[key])return;var tri=key.indexOf(TBLOCK)===0,p=key.slice((tri?TBLOCK:BLOCK).length).split(":"),it=MOB[+p[2]];
+    rows.push(["Mobility",tri?"T"+p[0]:p[0],tri?dispDay("t"+p[0],"Mon"):mobDay(+p[0]),it?it[1]:"","","","","","","yes",key]);});
+  for(var cw=1;cw<=WEEKS.length;cw++){var cl=S.runs[cw+":cf"]||{};if(cl.min||cl.note)rows.push(["CrossFit",cw,dispDay(cw,"Fri"),cl.note||"","","","","",cl.min||"","",cw+":cf"]);
+    var xl=S.runs[cw+":xt"]||{};if(xl.min||xl.note)rows.push(["Easy cardio",cw,dispDay(cw,"Wed"),xl.note||"","","","","",xl.min||"","",cw+":xt"]);}
+  // Triathlon block: week column reads T1–T16.
+  for(var tw=1;tw<=TRI_WEEKS.length;tw++){var tn="t"+tw;
+    TRI_SLOTS.forEach(function(s){var key=tn+":"+s[0],lg=S.runs[key]||{};
+      if(s[0]==="cf"){if(lg.min||lg.note)rows.push(["CrossFit","T"+tw,dispDay(tn,"Tue"),lg.note||"","","","","",lg.min||"","",key]);return;}
+      if(lg.km||lg.t)rows.push([s[3],"T"+tw,dispDay(tn,s[4]),s[1],"","","",lg.km||"",lg.t||"","",key]);});
+    TRI_MAINS.forEach(function(m){var key=TBLOCK+tw+":"+m.k;((S.logs[key]||{}).sets||[]).forEach(function(st,si){
+      if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Lift","T"+tw,dispDay(tn,"Tue"),m.name,si+1,st.w||"",st.r||"","","","",key]);});});
+    TRI_ACC.forEach(function(a,idx){var key=TBLOCK+tw+":acc:"+idx;((S.logs[key]||{}).sets||[]).forEach(function(st,si){
+      if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Accessory","T"+tw,dispDay(tn,"Tue"),a[0],si+1,st.w||"",st.r||"","","","",key]);});});}
+  Object.keys(S.tue).forEach(function(wk){if(S.tue[wk])rows.push(["Tuesday","T"+wk,"",S.tue[wk]==="cf"?"CrossFit":"Strength","","","","","","",wk+":tue"]);});
   Object.keys(S.indoor).forEach(function(k){if(S.indoor[k]){var p=k.split(":");rows.push(["Indoor",p[0],"",p[1],"","","","","","yes",k]);}});
   Object.keys(S.fri).forEach(function(wk){if(S.fri[wk])rows.push(["Friday",wk,"",S.fri[wk]==="cf"?"CrossFit":"Swim","","","","","","",wk+":fri"]);});
   Object.keys(S.moves).forEach(function(wk){var m=S.moves[wk]||{};DAYS7.forEach(function(d){if(m[d]&&m[d]!==d)rows.push(["Move",wk,d,m[d],"","","","","","",wk+":"+d]);});});
   // Anything logged in an earlier block stays exportable.
   Object.keys(S.logs).forEach(function(key){
-    if(key.indexOf(BLOCK)===0)return;
+    if(key.indexOf(BLOCK)===0||key.indexOf(TBLOCK)===0)return;
     var sets=(S.logs[key]||{}).sets||[];
     sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!==""))){var L=legacyLabel(key)||{};rows.push(["Legacy",L.week||"",L.day||"",L.name||"",si+1,st.w||"",st.r||"","","","",key]);}});});
   return rows.map(function(r){return r.map(csvCell).join(",");}).join("\n");
@@ -841,33 +1094,34 @@ function importCSV(text){
   var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
   ["category","week","day","item","set","weight","reps","distance","time","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
   if(ci.category<0||ci.key<0)return false;
-  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nFri={},nIndoor={},nRMs=Object.assign({},S.oneRMs),fixed=false;
+  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nFri={},nTue={},nIndoor={},nRMs=Object.assign({},S.oneRMs),fixed=false;
   var g=function(r,n){return ci[n]>=0?(r[ci[n]]||"").trim():"";};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
     var cat=g(r,"category"),key=g(r,"key"),wt=g(r,"weight"),rp=g(r,"reps");
     if(cat==="Max"){if(key)nRMs[key]=wt===""?"":Number(wt);}
-    else if(cat==="Run"||cat==="Swim"||cat==="Cardio"){if(!key)continue;var km=g(r,"distance"),tm=g(r,"time");nRuns[key]=nRuns[key]||{};if(km!=="")nRuns[key].km=km;if(tm!=="")nRuns[key].t=tm;}
+    else if(cat==="Run"||cat==="Swim"||cat==="Cardio"||cat==="Bike"){if(!key)continue;var km=g(r,"distance"),tm=g(r,"time");nRuns[key]=nRuns[key]||{};if(km!=="")nRuns[key].km=km;if(tm!=="")nRuns[key].t=tm;}
     else if(cat==="Lift"||cat==="Main"||cat==="Accessory"||cat==="Legacy"){
       if(!key)continue;var si=parseInt(g(r,"set"),10);if(isNaN(si)||si<1)continue;
       var e=nLogs[key]=nLogs[key]||{sets:[]};e.sets[si-1]=e.sets[si-1]||{};
       if(wt!=="")e.sets[si-1].w=wt;if(rp!=="")e.sets[si-1].r=rp;}
     else if(cat==="Session"){if(key)nSess[key]=true;}
     else if(cat==="Mobility"){if(key)nMob[key]=true;}
-    else if(cat==="CrossFit"){if(!key)continue;var cm=g(r,"time"),cn=g(r,"item");nRuns[key]={};if(cm!=="")nRuns[key].min=cm;if(cn!=="")nRuns[key].note=cn;}
+    else if(cat==="CrossFit"||cat==="Easy cardio"){if(!key)continue;var cm=g(r,"time"),cn=g(r,"item");nRuns[key]={};if(cm!=="")nRuns[key].min=cm;if(cn!=="")nRuns[key].note=cn;}
     else if(cat==="Indoor"){if(key)nIndoor[key]=true;}
+    else if(cat==="Tuesday"){var tw2=key.split(":")[0];if(tw2)nTue[tw2]=g(r,"item")==="CrossFit"?"cf":"lift";}
     else if(cat==="Friday"){var fw=key.split(":")[0];if(fw)nFri[fw]=g(r,"item")==="CrossFit"?"cf":"swim";}
     else if(cat==="Move"){var mp=key.split(":"),it2=g(r,"item");if(mp.length===2&&DAYS7.indexOf(mp[1])>=0&&DAYS7.indexOf(it2)>=0){(nMoves[mp[0]]=nMoves[mp[0]]||{})[mp[1]]=it2;}}
     else if(cat==="Travel"){if(key)nTrav[key]=true;}
     else if(cat==="Meta"){if(key==="shift28")fixed=true;}
   }
-  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;S.fri=nFri;S.indoor=nIndoor;
+  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;S.fri=nFri;S.tue=nTue;S.indoor=nIndoor;
   Object.keys(nMoves).forEach(function(wk){DAYS7.forEach(function(d){if(!nMoves[wk][d])nMoves[wk][d]=d;});});S.moves=nMoves;
   // A file from the old app (before the date fix) still has the haze-period weeks one ahead: fix them the same way.
   delete S.shiftNote;
   if(!fixed){try{localStorage.setItem("ss_state_before_shift28",JSON.stringify(S));}catch(e){}
     var nm=shiftBackOneWeek();if(nm)S.shiftNote=nm;}
-  S.shift28=true;S.week=currentWeek();S.view="new";persist();render();return true;
+  S.shift28=true;S.week=currentWeek();S.view=triStarted()?"tri":"new";if(triStarted())S.tweek=currentTriWeek();persist();render();return true;
 }
 
 // ---------- views ----------
@@ -904,7 +1158,7 @@ function runHTML(slot,day,title,target,unit,spec,note,cls,dl,wk,extra,how){
     '<input inputmode="text" placeholder="'+(dl==="m"?"mm:ss":"h:mm")+'" data-run="'+key+'" data-f="t" value="'+(lg.t!=null?esc(lg.t):'')+'"></div>'+(extra||'')+'</div>';
 }
 function mainHTML(m,trav){
-  var w=WEEKS[S.week-1],W=liftW(m),T=liftTop(m),B=bigW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
+  var w=curW(),W=liftW(m),T=liftTop(m),B=bigW(m),key=K()+":"+m.k,wl=(S.logs[key]||{}).sets||[],rows="";
   for(var si=0;si<lSets(w);si++){var st=wl[si]||{},isTop=!!(m.top&&si===0);
     var ph=isTop?(T?fmt(T):'kg'):(W?fmt(W):'kg'),reps=isTop?m.top:m.reps,lbl=isTop?'Top':'Set '+(m.top?si:si+1);
     rows+='<div class="logrow"><span class="setn">'+lbl+'</span><input inputmode="decimal" placeholder="'+ph+'" data-log="'+key+'" data-set="'+si+'" data-f="w" value="'+(st.w!=null?esc(st.w):'')+'"><span class="x">×</span><input inputmode="numeric" placeholder="'+reps+'" data-log="'+key+'" data-set="'+si+'" data-f="r" value="'+(st.r!=null?esc(st.r):'')+'"></div>';}
@@ -936,8 +1190,132 @@ function liftHTML(){
       'Upper body can keep building: when every set of a pull feels solid, add a rep or a little weight. Legs stay on maintenance. RPE 7–8, never to failure. Short on time? Alternate sets — pull-ups with calf raises, rows with knee raises.')+'</div>'+
     '<ul>'+accFor(S.week).map(accHTML).join("")+'</ul></div></div>';
 }
+// A card logged in minutes plus a short note (CrossFit classes, easy cross-training).
+function minCard(key,head,spec,target,unit,note,how,ph){var lg=S.runs[key]||{};
+  return '<div class="run"><div class="rtop"><div><div class="rname">'+head+'</div>'+(spec?'<div class="rspec">'+esc(spec)+'</div>':'')+'</div>'+
+    (target?'<div><div class="rt">'+target+'</div><div class="runit">'+unit+'</div></div>':'')+'</div>'+
+    (note?'<div class="rnote">'+esc(note)+'</div>':'')+(how||'')+
+    '<div class="logrow"><span class="setn">min</span><input inputmode="numeric" placeholder="min" data-run="'+key+'" data-f="min" value="'+(lg.min!=null?esc(lg.min):'')+'">'+
+    '<span class="setn">'+(ph||'what')+'</span><input inputmode="text" placeholder="'+(ph==="WOD"?"what you did":"bike or swim")+'" style="width:auto;flex:1;text-align:left;padding-left:8px" data-run="'+key+'" data-f="note" value="'+(lg.note!=null?esc(lg.note):'')+'"></div></div>';}
+const XT_HOW={steps:["Ride or swim — whichever you can get to. A stationary or spin bike is fine.","Keep it easy the whole way: you should be able to talk in full sentences.","No intervals and no hard efforts."],
+  feel:"Easy and steady. You should finish fresher than you started.",
+  why:"Boxing was your mid-week easy aerobic session. This keeps that work with no impact, and gives you a head start on the triathlon. It isn't replaced with more running: extra running this close to the race adds injury risk and too little fitness in time to matter."};
+function xtHTML(){var day=dispDay(S.week,"Wed"),rw=S.week===RACE_WEEK;
+  return minCard(S.week+":xt",day+' · Easy bike or swim',rw?"race week, just loosen up":"replaces boxing",rw?"20":"30–40","min easy",
+    rw?"A short, easy spin or swim to keep the legs moving. Skip it if you'd rather rest.":"Easy cycling or swimming, conversational the whole way.",howHTML("xt",XT_HOW),"what");}
+
+// ---------- triathlon block ----------
+function triWeekText(n){var w=TRI_WEEKS[n-1],tn="t"+n,last=n===TRI_WEEKS.length,out="";
+  var line=function(slot,label,sess,unit){var lg=S.runs[tn+":"+slot]||{},bits=[];if(lg.km)bits.push(lg.km+" "+unit);if(lg.t)bits.push(lg.t);
+    var o="\n  "+label+" — "+sess.t+" "+sess.u+" · "+sess.s+(bits.length?" · logged "+bits.join(" / "):"");
+    sess.st.forEach(function(x,i){o+="\n    "+(i+1)+". "+x;});return o;};
+  out+=line("swimA",dispDay(tn,"Mon")+" · Swim",w.swimA,"m");
+  out+=line("bike",dispDay(tn,"Wed")+" · Bike",w.bike,"km");
+  out+=line("runq",dispDay(tn,"Thu")+" · Run",w.runq,"km");
+  out+=line("swimB",dispDay(tn,"Fri")+" · Swim",w.swimB,"m");
+  if(w.brick)out+=line("brick",dispDay(tn,"Sat")+" · "+(w.brick.title||"Brick"),w.brick,"km");
+  if(w.long)out+="\n  "+dispDay(tn,"Sun")+" · Long run — "+w.long.km+" km "+w.long.s;
+  if(last)out+="\n  Sun · RACE — "+TRI.name;
+  return out;}
+function triSessionText(){var n=S.tweek,w=TRI_WEEKS[n-1],out="Triathlon week "+n+" of "+TRI_WEEKS.length+" · "+w.phase+" · "+triRange(n);
+  out+="\n"+Math.max(daysToTri(),0)+" days to the "+TRI.name+"\n"+w.note+"\n\nSESSIONS"+triWeekText(n);
+  if(n<TRI_WEEKS.length){
+    if(triTue(n)==="cf"){var c=S.runs["t"+n+":cf"]||{},cb=[c.min?c.min+" min":"",c.note||""].filter(Boolean);
+      out+="\n\nCROSSFIT ("+dispDay("t"+n,"Tue")+")"+(cb.length?" · logged "+cb.join(" / "):"")+"\n  Afterwards: Nordic hamstring curls and Copenhagen planks";}
+    else{out+="\n\nSTRENGTH ("+dispDay("t"+n,"Tue")+")";
+      TRI_MAINS.forEach(function(m){var B=bigW(m),parts=((S.logs[K()+":"+m.k]||{}).sets||[]).map(function(st){return st&&fmtSet(st);}).filter(Boolean);
+        out+="\n  "+m.name+" — "+liftSpec(m)+(B?" · "+fmt(B)+"kg"+(m.top?" top":""):"")+"\n    logged: "+(parts.length?parts.join(", "):"—");});
+      TRI_ACC.forEach(function(a,idx){var parts=((S.logs[K()+":acc:"+idx]||{}).sets||[]).map(function(st){return st&&fmtSet(st);}).filter(Boolean);
+        out+="\n  "+a[0]+" — "+a[1]+(parts.length?" · "+parts.join(", "):"");});}}
+  return out;}
+function triCard(slot,day,title,sess,dl,cls,extra){var tn="t"+S.tweek,h=TRI_HOW[slot]||{};
+  var how={steps:sess.st,feel:h.feel,why:h.why,total:sess.tot};
+  return runHTML(slot,dispDay(tn,day),title,sess.t,sess.u,sess.s,"",cls||"",dl,tn,"",
+    howHTML("t-"+slot,how,(slot==="swimA"&&h.drills?'<p><b>Drills:</b> '+esc(h.drills)+'</p>':'')+(extra||"")));}
+function brickHTML(w){var tn="t"+S.tweek,b=w.brick,lg=S.runs[tn+":brickrun"]||{},h=TRI_HOW.brick,run=!b.title||b.title==="Race rehearsal";
+  var html=triCard("brick","Sat",b.title||"Brick",b,"km","key");
+  if(!run)return html;
+  // the run off the bike gets its own log row inside the same card
+  return html.replace(/<\/div>$/,'<div class="logrow"><span class="setn">run km</span><input inputmode="decimal" placeholder="km" data-run="'+tn+':brickrun" data-f="km" value="'+(lg.km!=null?esc(lg.km):'')+'">'+
+    '<span class="setn">time</span><input inputmode="text" placeholder="h:mm" data-run="'+tn+':brickrun" data-f="t" value="'+(lg.t!=null?esc(lg.t):'')+'"></div></div>');}
+function triTueHTML(){var n=S.tweek,tn="t"+n,c=triTue(n),day=dispDay(tn,"Tue");
+  var sel='<div class="frisel"><span class="hint">'+day+' · your choice</span>'+
+    '<button class="arrbtn'+(c==="lift"?' on':'')+'" data-tue="lift">Gym</button>'+
+    '<button class="arrbtn'+(c==="cf"?' on':'')+'" data-tue="cf">CrossFit</button></div>';
+  if(c==="cf")return sel+minCard(tn+":cf",day+' · CrossFit','class','','',"Go to class. Afterwards, add 2 × 5 Nordic hamstring curls and 2 × 20 s Copenhagen planks each side — 5 minutes, and they're the part that protects against strains.",'',"WOD");
+  return sel+triLiftHTML();}
+function triLiftHTML(){var w=TRI_WEEKS[S.tweek-1];
+  return '<div class="day"><div class="dhead">'+dispDay("t"+S.tweek,"Tue")+' · Strength</div>'+
+    '<div class="warm"><div class="warmh">Warm-up first</div>'+
+    '<div class="warmi"><b>1.</b> 5 min easy bike or row, then McGill Big 3</div>'+
+    '<div class="warmi"><b>2.</b> Ramp each lift to its working weight</div></div>'+
+    howHTML("t-lift",TRI_LIFT_HOW)+(w.lnote?'<div class="rnote">'+esc(w.lnote)+'</div>':'')+
+    TRI_MAINS.map(function(m){return mainHTML(m,false);}).join("")+
+    '<div class="acc"><div class="lbl">Accessories</div>'+
+    '<div class="accnote">Pull-ups and rows build your swim pull. Nordics, calf raises and Copenhagen planks are for your strain history: '+
+      'start them easy, because the first two weeks of Nordics make hamstrings sore. RPE 7–8, never to failure.</div>'+
+    '<ul>'+TRI_ACC.map(accHTML).join("")+'</ul></div></div>';}
+function renderTri(){
+  var n=S.tweek,tn="t"+n,w=TRI_WEEKS[n-1],td=todayDay(),isNow=triStarted()&&n===currentTriWeek(),last=n===TRI_WEEKS.length;
+  var doneCount=DAYS7.filter(function(d){return !!S.sessions[K()+":"+d];}).length,d2r=daysToTri();
+  // cards in the order of the days they now sit on
+  var cards=[["Mon",triCard("swimA","Mon",n===1?"Swim · easy":"Swim · technique",w.swimA,"m")+mobHTML()],
+    ["Wed",triCard("bike","Wed","Bike",w.bike,"km")],
+    ["Thu",triCard("runq","Thu",n===1?"Run · easy":"Run",w.runq,"km",n===1?"":"key",'<p class="effort"><b>Effort guide.</b> '+esc(EFFORT)+'</p>')],
+    ["Fri",triCard("swimB","Fri",w.swimB.open?"Swim · open water":"Swim",w.swimB,"m",w.swimB.open?"key":"")]];
+  if(!last)cards.push(["Tue",triTueHTML()]);
+  if(w.brick)cards.push(["Sat",brickHTML(w)]);
+  if(w.long)cards.push(["Sun",runHTML("long",dispDay(tn,"Sun"),"Long run",w.long.km,"km",w.long.s,w.long.note||"","",null,tn,"",howHTML("t-long",{steps:["Run the whole distance at an easy, conversational pace.","Drink every 20–30 min — it's hot.","Go by feel, not pace."],feel:TRI_HOW.long.feel,why:TRI_HOW.long.why}))]);
+  if(last)cards.push(["Sun",runHTML("race",dispDay(tn,"Sun"),"RACE — MetaSprint","750+20+5","m · km · km","sprint triathlon","Log your finish time.","race",null,tn,"",howHTML("t-race",TRI_RACE_HOW))]);
+  cards.sort(function(a,b){return DAYS7.indexOf(dispDay(tn,a[0]))-DAYS7.indexOf(dispDay(tn,b[0]));});
+  document.getElementById("app").innerHTML=
+  '<div class="eyebrow">Triathlon Block · MetaSprint</div>'+
+  '<h1>The Tri</h1>'+
+  '<p class="lead">Sixteen weeks from the half to the start line. Two swims, a ride, a brick, two runs and one gym day.</p>'+
+  '<div class="count"><div><div class="cdays">'+(d2r>0?d2r:0)+'</div><div class="clbl">'+(d2r>0?"days to go":d2r===0?"race day":"done")+'</div></div>'+
+  '<div class="cright"><div class="crace">Sun 28 Mar · '+TRI.event+'</div><div class="cmeta">'+TRI.name+'</div><div class="cmeta">'+TRI.meta+'</div><div class="cmeta">'+TRI.tbc+'</div></div></div>'+
+  rewardHTML()+
+  maxesHTML("Strength can build again in December and January. When a top set feels easy, raise that max.")+
+  stripHTML()+
+  '<div class="wkhead"><div><b>Week '+n+'</b>'+
+  '<span class="badge" style="color:'+TRI_PHASE[w.phase]+';border-color:'+TRI_PHASE[w.phase]+'">'+w.phase+'</span>'+
+  (doneCount?'<span class="donecount">'+doneCount+' done</span>':'')+
+  '<div class="dates">'+triRange(n)+(isNow?' · this week':'')+'</div></div>'+
+  '<div class="hbtns"><span class="hint">tap ✓ when done</span>'+
+  '<button class="arrbtn'+(arranging?' on':'')+'" data-act="arrange">'+(arranging?'Done':'⇅ Move days')+'</button></div></div>'+
+  (arranging?'<div class="arrbar"><span>'+(picked?'Now tap the day to swap <b>'+picked+'</b> with.':'Tap a day, then the day to swap it with.')+'</span>'+
+    (moveMap(tn)?'<button class="arrbtn" data-act="arrange-reset">Reset week</button>':'')+'</div>':'')+
+  moveWarnings(tn).map(function(t){return '<div class="warnb">'+esc(t)+'</div>';}).join("")+
+  '<div class="rnote" style="margin-top:12px">'+esc(w.note)+'</div>'+
+  schedHTML(weekRows(tn).map(function(r){return [r[0],r[1],r[2],null,null,r[4],r[5]];}),K()+":",isNow,td,last?"RACE — MetaSprint":false)+
+  cards.map(function(c){return c[1];}).join("")+
+  '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
+  '<div class="ref"><button data-act="ref">How this plan works<span>'+(S.ref?'▲':'▼')+'</span></button>'+
+  (S.ref?'<div class="refbody">'+
+    '<h4>The race</h4>'+
+    '<p>The MetaSprint Series triathlon at East Coast Park: a <span class="a">750 m sea swim, 20 km bike and 5 km run</span>. The 2027 date and distances aren\'t announced yet. The 2026 race was on Sun 29 Mar, so the plan counts down to Sun 28 Mar 2027. If the date or the distances turn out different, the plan needs adjusting to match.</p>'+
+    '<h4>Built for you</h4>'+
+    '<p>Your half-marathon block gives you a strong running engine, so the run stays at two sessions: the hard one on Thursday with your friend, and an easy long run with the group on Sunday. The swim and the bike are where the time is: two swims and two rides a week, with technique first. Strength keeps its Tuesday slot (or a CrossFit class if you prefer), with exercises chosen for your strain history. Wednesday\'s ride can be on a spin or stationary bike; the Saturday bricks from week 6 and the week 13 rehearsal are best done outside on the bike you\'ll race.</p>'+
+    '<h4>Easy most of the time</h4>'+
+    '<p>Only <span class="a">Thursday and Saturday</span> are hard. Everything else is genuinely easy. In studies of endurance athletes, including recreational triathletes, spending about 80% of training at low intensity and keeping the hard work for a couple of sessions gave equal or better results than lots of moderately hard training. Easy days are what let the hard days be good.</p>'+
+    '<h4>Swim technique first</h4>'+
+    '<p>For newer triathletes, the swim is limited by technique more than fitness, so Monday is drills while you are fresh and Friday is the fitness set. The 750 m time trials in weeks 5 and 8 give you your race pace. From week 10 Friday moves to the sea: waves, salt water, sighting and mass starts are skills a pool can\'t teach. <span class="a">Always swim open water with a buddy, at a lifeguarded beach, in daylight.</span></p>'+
+    '<h4>Bricks</h4>'+
+    '<p>Running straight off the bike feels heavy and uncoordinated for the first few minutes. Practising it every week makes it familiar, and lets you rehearse the transition itself. Week 13 is the full rehearsal: 20 km and 5 km in race kit, on race-day food.</p>'+
+    '<h4>Strength</h4>'+
+    '<p>Adding heavy, low-rep strength work to endurance training improves running and cycling economy, meaning less energy at the same pace, without adding bulk. December and January are when strength can build again. From February it drops to two sets so it doesn\'t eat into the bike and run. Two exercises are there for you specifically: <span class="a">Nordic hamstring curls</span> cut hamstring strains by about half in trials, and <span class="a">Copenhagen planks</span> cut groin problems. Calf raises protect the achilles, and band rotations protect the shoulder for swimming.</p>'+
+    '<h4>Recovery, cutbacks and taper</h4>'+
+    '<p>Week 1 is recovery: muscle damage from a half takes about a week to clear, so nothing hard and no running before Thursday. Every 4th week is a cutback. The last 10 days are the taper: about half the volume with the same sharp efforts, which is what research on tapering supports. Christmas, New Year and Chinese New Year each have a note on what to drop or move.</p>'+
+    '<h4>Heat</h4>'+
+    '<p>Train early, drink on every ride and run over 45 min, and take an electrolyte drink on the long bricks. Race day will be hot.</p>'+
+    '<h4>If something hurts</h4>'+
+    '<p>Sharp pain, or a niggle that changes how you move, means stop that session. With three sports there is always one you can do instead — an easy swim or spin replaces a run without costing fitness.</p>'+
+  '</div>':'')+'</div>'+
+  footerHTML();
+  scrollStrip();}
 function render(){
   if(S.view==="old")return renderOld();
+  if(S.view==="tri")return renderTri();
   var w=WEEKS[S.week-1],td=todayDay(),isNow=(S.week===currentWeek());
   var doneCount=SCHED.filter(function(s){return !!S.sessions[K()+":"+s[0]];}).length;
   var d2r=daysToRace();
@@ -977,6 +1355,7 @@ function render(){
   ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?(isIndoor(S.week,"quality")
       ?runHTML("quality",qDay(S.week)||"—",w.q.n+" · treadmill",w.q.s,"session","indoors, haze",QHOW[S.week].sum+" On the treadmill.","key inside",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,true),qExtra(S.week,true)))
       :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session",(S.week===4?"cutback week, light speed work":S.week===RACE_WEEK?"race week tune-up":"the one hard run"),QHOW[S.week].sum,"key",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,false),qExtra(S.week,false)))):"")+
+  (S.week>=BOX_END?xtHTML():"")+
   friHTML()+
 
   mobHTML()+
@@ -995,10 +1374,10 @@ function render(){
     '<p>The Thursday sprints replace the quality run; they are never added on top of it. All-out sprinting is the most common cause of hamstring strains, and strains are your injury pattern, so stay around 85–90% for the first few weeks, warm up properly first, and stop the moment a hamstring tightens. From week 5 the tempo comes first and the sprints are a short finish. Race week has none.</p>'+
     '<h4>Monday mobility</h4>'+
     '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of strength work: bridge walkouts, slow calf lowers and a foam-roller squeeze for the groin. That strength is what makes hamstrings, calves and groin harder to strain. It starts in week 3 and only needs a mat, a foam roller, a ball and a wall. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
-    '<h4>Boxing alongside the running</h4>'+
-    '<p>Boxing is excellent aerobic work with low running impact, which is exactly why it survived the rebuild and the HIIT did not. Wednesday is the full session. Saturday stays light and technical — pads, footwork and drills, no hard conditioning rounds — because you run long the next morning. Friday is a swim or a CrossFit class, your call. Only <span class="a">two</span> sessions each week are meant to be hard: the quality run and the long run. Everything else stays genuinely easy, and that is what lets the two that matter be good.</p>'+
-    '<h4>Haze</h4>'+
-    '<p>The long run, quality run and swim each have a <b>Move indoors</b> button. Runs go to the treadmill at the same distance and a 1% incline; the swim becomes 25–30 min of easy cardio on a bike, elliptical or rower. Rule of thumb: if the PSI is over 100, take it indoors.</p>'+
+    '<h4>After boxing</h4>'+
+    '<p>Your boxing membership ends with the class on Tuesday 10 Nov, so that week strength moves to Wednesday. Squat lighter than usual (skip the top triple), because Thursday\'s intervals are the next day. Boxing was your easy mid-week aerobic session, so from week 8 <span class="a">Wednesday becomes 30–40 min of easy cycling or swimming</span>: the same job with no impact, and a head start on the triathlon. It isn\'t replaced with extra running. Fitness from new running takes several weeks to show, so adding it this close to the race brings injury risk and little benefit. Saturdays become rest days before the long run. Friday is still a swim or a CrossFit class, your call. Only <span class="a">two</span> sessions each week are hard: the quality run and the long run.</p>'+
+    '<h4>The missed strength week</h4>'+
+    '<p>Missing one week of lifting costs you nothing measurable; strength takes several weeks without training to start dropping. Week 7 lifts at a normal load (the runs are on a cutback that week) and nothing is doubled up to make up for it.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
     '<p>Weeks <span class="g">4 and 7</span> are cutbacks and weeks <span class="g">9–10</span> are the taper. You get fitter during these, not during the hard weeks. The taper is where discipline matters most: the fitness is already banked, and nothing you add in the last fortnight will help you — but plenty could hurt you.</p>'+
     '<h4>Race day</h4>'+
@@ -1017,7 +1396,7 @@ app.addEventListener("input",function(e){
   if(t.dataset.rm){
     var v=t.value;S.oneRMs[t.dataset.rm]=v===""?"":Number(v);persist();
     if(S.view==="old")Object.keys(OLD_PROG).forEach(function(k){var el=document.getElementById("wt-"+k);if(el){var W=oldW(k);el.textContent=W?fmt(W):"—";}});
-    else mainsFor(S.week).forEach(function(m){var el=document.getElementById("wt-"+m.k);if(el){var B=bigW(m);el.textContent=B?fmt(B):"—";}});
+    else if(S.view!=="old")curMains().forEach(function(m){var el=document.getElementById("wt-"+m.k);if(el){var B=bigW(m);el.textContent=B?fmt(B):"—";}});
   }else if(t.dataset.log){
     var key=t.dataset.log,si=+t.dataset.set,f=t.dataset.f;
     var o=S.logs[key]=S.logs[key]||{};var arr=o.sets=o.sets||[];arr[si]=arr[si]||{};arr[si][f]=t.value;persist();
@@ -1039,6 +1418,7 @@ app.addEventListener("change",function(e){
 app.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.week){arranging=false;picked=null;S.view="new";S.week=Number(b.dataset.week);persist();render();}
+  else if(b.dataset.tweek){arranging=false;picked=null;S.view="tri";S.tweek=Number(b.dataset.tweek);persist();render();}
   else if(b.dataset.oweek){arranging=false;picked=null;S.view="old";S.oweek=Number(b.dataset.oweek);persist();render();}
   else if(b.dataset.act==="move"){
     var from=S.week,ans=prompt("Move ALL of week "+from+"'s logs (runs, lifts, checkmarks) to which week? (1–"+WEEKS.length+")");
@@ -1051,18 +1431,19 @@ app.addEventListener("click",function(e){
   else if(b.dataset.how){var hid=b.dataset.how;if(S.how[hid])delete S.how[hid];else S.how[hid]=true;persist();render();}
   else if(b.dataset.indoor){var ik=S.week+":"+b.dataset.indoor;if(S.indoor[ik])delete S.indoor[ik];else S.indoor[ik]=true;persist();render();}
   else if(b.dataset.fri){S.fri[S.week]=b.dataset.fri;persist();render();}
+  else if(b.dataset.tue){S.tue[S.tweek]=b.dataset.tue;persist();render();}
   else if(b.dataset.act==="arrange"){arranging=!arranging;picked=null;render();}
-  else if(b.dataset.act==="arrange-reset"){delete S.moves[S.week];picked=null;persist();render();}
+  else if(b.dataset.act==="arrange-reset"){delete S.moves[curN()];picked=null;persist();render();}
   else if(b.dataset.pick){var d=b.dataset.pick;
-    if(!picked)picked=d;else if(picked===d)picked=null;else{swapDays(S.week,picked,d);picked=null;}
+    if(!picked)picked=d;else if(picked===d)picked=null;else{swapDays(curN(),picked,d);picked=null;}
     render();}
   else if(b.dataset.sess){var k=K()+":"+b.dataset.sess;if(S.sessions[k])delete S.sessions[k];else S.sessions[k]=true;persist();render();}
   else if(b.dataset.mob){var mk=K()+":mob:"+b.dataset.mob;
     if(S.mob[mk])delete S.mob[mk];
-    else{S.mob[mk]=true;if(mobItems().every(function(x){return S.mob[K()+":mob:"+x.i];})){var mt=ovr(S.week).mobTick;S.sessions[mt?BLOCK+mt[0]+":"+mt[1]:K()+":Mon"]=true;}} // finishing the routine ticks Monday
+    else{S.mob[mk]=true;if(S.view!=="tri"&&mobItems().every(function(x){return S.mob[K()+":mob:"+x.i];})){var mt=ovr(S.week).mobTick;S.sessions[mt?BLOCK+mt[0]+":"+mt[1]:K()+":Mon"]=true;}} // finishing the routine ticks Monday
     persist();render();}
   else if(b.dataset.act==="mobopen"){S.mobOpen=!(S.mobOpen!==false);persist();render();}
-  else if(b.dataset.act==="copyweek"){copyText(S.view==="old"?oldSessionText():sessionText(),b);}
+  else if(b.dataset.act==="copyweek"){copyText(S.view==="old"?oldSessionText():S.view==="tri"?triSessionText():sessionText(),b);}
   else if(b.dataset.act==="copyall"){copyText(fullLogText(),b);}
   else if(b.dataset.act==="ref"){S.ref=!S.ref;render();}
   else if(b.dataset.act==="export"){downloadCSV(b);}
