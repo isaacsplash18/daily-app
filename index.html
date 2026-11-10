@@ -197,10 +197,10 @@
 const RACE={name:"BYD Singapore International Marathon",event:"Half Marathon · 21.1 km",date:"2026-12-06",meta:"F1 Pit Building → National Stadium · 3h45 cut-off"};
 const START="2026-09-28"; // Monday of week 1
 const BLOCK="hm26";
-// After the half: the MetaSprint Series triathlon. The 2027 date and distances aren't announced yet; the
-// 2026 race was Sun 29 Mar at East Coast Park, so this assumes the last Sunday of March and sprint distance.
-const TRI={name:"MetaSprint Series Triathlon",event:"Sprint triathlon",date:"2027-03-28",
-  meta:"East Coast Park · 750 m sea swim · 20 km bike · 5 km run",tbc:"Date and distances to confirm when the 2027 series is announced"};
+// After the half: the MetaSprint Series triathlon on Sun 21 Mar 2027. Sprint distance is assumed until the
+// category is confirmed.
+const TRI={name:"MetaSprint Series Triathlon",event:"Sprint triathlon",date:"2027-03-21",
+  meta:"East Coast Park · 750 m sea swim · 20 km bike · 5 km run",tbc:"Sprint distances assumed until you confirm your category"};
 const TRI_START="2026-12-07"; // the Monday after the half
 const TBLOCK="tri";
 function isTriN(n){return typeof n==="string"&&n.charAt(0)==="t";}
@@ -464,7 +464,7 @@ function mobHTML(){
     h+='</div>';}
   return h+'</div>';}
 
-// ---- Triathlon block: 16 weeks from the day after the half to the MetaSprint triathlon ----
+// ---- Triathlon block: 15 weeks from the day after the half to the MetaSprint triathlon ----
 // Week shape: Mon technique swim + mobility · Tue strength (or CrossFit) · Wed easy ride · Thu run with your friend ·
 // Fri swim fitness · Sat brick (race-effort ride, then run off the bike) · Sun easy long run with the group.
 // Only Thursday and Saturday are hard; everything else is easy. Every 4th week is a cutback.
@@ -575,15 +575,7 @@ const TRI_WEEKS=[
   swimB:{open:1,t:"750",u:"m",s:"Open water: race distance",st:["Lifeguarded beach, with a buddy.","5 min easy.","Swim 750 m continuously at race effort, sighting every 6–8 strokes. Your watch or a known course helps; otherwise swim about your 750 m time.","Easy to finish."],tot:"about 30 min"},
   brick:{title:"Race rehearsal",t:"20+5",u:"km",s:"full bike and run at race effort",st:["Set up a mini transition: bike, helmet, shoes, race belt and a towel.","Ride 20 km at race effort.","Change into running shoes as fast as you can, and time it.","Run 5 km: the first 2 km steady, the last 3 km at 5k effort.","Eat and drink exactly what you will on race day."],tot:"about 75 min"},
   long:{km:8,s:"easy, the day after the rehearsal"}},
- {n:14,phase:"Peak",pct:.725,sets:2,
-  note:"Last big week. Practise transitions until they're boring.",
-  swimA:{t:"1,300",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting.","4 × 50 m fast.","100 m easy."],tot:"about 40 min"},
-  bike:{t:"50",u:"min",s:"Easy ride with tempo",st:["15 min easy.","3 × 5 min tempo, with 3 min easy between.","Ride easy to finish."],tot:"50 min"},
-  runq:{t:"3×1.6",u:"km",s:"Mile repeats at 5k pace",st:["Run 10 min easy, then 3 strides.","3 × 1.6 km at 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 50 min"},
-  swimB:{open:1,t:"25",u:"min",s:"Open water: starts and sighting",st:["Lifeguarded beach, with a buddy.","5 min easy.","2 × 10 min at race effort with sighting, 2 min easy between.","3 practice starts: hard for 30 s, then settle.","Easy to finish."],tot:"about 30 min"},
-  brick:{t:"60+15",u:"min",s:"race effort → run at race effort",st:["Ride 20 min easy, then 20 min at race effort, then easy to 60 min.","Practise the bike-to-run change three times before you go: rack, helmet off, shoes on, go.","Run 15 min off the bike at 5k effort."],tot:"about 80 min"},
-  long:{km:10,s:"easy, with the group"}},
- {n:15,phase:"Taper",pct:.675,sets:1,lnote:"Last lift before the race: light, crisp, nowhere near failure. Skip the Nordics this week.",
+ {n:14,phase:"Taper",pct:.675,sets:1,lnote:"Last lift before the race: light, crisp, nowhere near failure. Skip the Nordics this week.",
   note:"Taper. About half the volume, same sharp efforts. Resist adding anything.",
   swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","6 × 25 m drills.","4 × 50 m at race pace.","100 m easy."],tot:"30 min"},
   bike:{t:"40",u:"min",s:"Easy ride with race-effort minutes",st:["Ride 40 min easy, with 4 × 1 min at race effort in the middle."],tot:"40 min"},
@@ -591,7 +583,7 @@ const TRI_WEEKS=[
   swimB:{open:1,t:"20",u:"min",s:"Open water, easy",st:["Lifeguarded beach, with a buddy.","20 min easy, with 4 × 1 min at race effort.","Practise one start."],tot:"20 min"},
   brick:{t:"45+10",u:"min",s:"short and sharp",st:["Ride 45 min easy, with 2 × 5 min at race effort.","Run 10 min off the bike, the first 5 min at 5k effort."],tot:"about 60 min"},
   long:{km:8,s:"easy, last long run"}},
- {n:16,phase:"Race",pct:.60,sets:1,
+ {n:15,phase:"Race",pct:.60,sets:1,
   note:"Race week. Short, sharp and rested. Check the bike on Wednesday so there's time to fix anything.",
   swimA:{t:"20",u:"min",s:"Easy swim + 4 fast 25s",st:["Swim 20 min easy, with 4 × 25 m fast in the middle."],tot:"20 min"},
   bike:{t:"30",u:"min",s:"Easy spin + 3 race-effort minutes",st:["Ride 30 min easy, with 3 × 1 min at race effort.","Check tyres, brakes and gears afterwards."],tot:"30 min"},
@@ -646,7 +638,7 @@ const TRI_HOW={
    why:"Keeps the endurance from your half-marathon block while you train for a 5 km run. It stays short and easy so it doesn't take energy from the brick or the Thursday run."}};
 const TRI_RACE_HOW={steps:["Rack your bike early and lay out transition: helmet on the bars, shoes, race belt, towel. Walk the route from the swim exit to your bike and from your bike to the run exit.","Warm up with 5 min easy jogging and a few minutes of easy swimming if it's allowed.","Swim: start at the side or the back, settle into your rhythm, and sight every 6–8 strokes. Don't race the first 100 m.","Bike: helmet on and buckled before you touch the bike. Ease in for 2–3 min, then hold race effort. Drink early.","Run: short, quick steps for the first kilometre while your legs come round, then 5k effort to the finish."],
   feel:"Controlled in the water, strong on the bike, and everything you have left on the run.",
-  why:"Sixteen weeks of work. Swim smooth, ride steady, run hard."};
+  why:"Fifteen weeks of work. Swim smooth, ride steady, run hard."};
 const TRI_LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big 3 (curl-up, side plank, bird dog).","Do the ramp sets before each main lift's working sets.","Squat and bench: work up to one top set of 3 that leaves about two reps in the tank, then the lighter back-off sets of 5.","Rest 2–3 min between sets of the main lifts and 60–90 s between accessory sets.","Never go to failure: end every set with 1–2 good reps left.","Nordics: start with 2 × 3 if 5 is too many; most of the benefit comes from lowering slowly."],
   feel:"Heavy but crisp. You should leave feeling you could do more.",
   why:"Heavy, low-rep strength work makes running and cycling cheaper: you use less energy at the same pace. High-rep circuits don't do the same. December and January are when it can build; from February it drops to 2 sets so it doesn't take energy from the bike and run. The Nordics and Copenhagen planks are there because strains are your injury pattern.",
@@ -1051,7 +1043,7 @@ function buildCSV(){
     rows.push(["Mobility",tri?"T"+p[0]:p[0],tri?dispDay("t"+p[0],"Mon"):mobDay(+p[0]),it?it[1]:"","","","","","","yes",key]);});
   for(var cw=1;cw<=WEEKS.length;cw++){var cl=S.runs[cw+":cf"]||{};if(cl.min||cl.note)rows.push(["CrossFit",cw,dispDay(cw,"Fri"),cl.note||"","","","","",cl.min||"","",cw+":cf"]);
     var xl=S.runs[cw+":xt"]||{};if(xl.min||xl.note)rows.push(["Easy cardio",cw,dispDay(cw,"Wed"),xl.note||"","","","","",xl.min||"","",cw+":xt"]);}
-  // Triathlon block: week column reads T1–T16.
+  // Triathlon block: week column reads T1–T15.
   for(var tw=1;tw<=TRI_WEEKS.length;tw++){var tn="t"+tw;
     TRI_SLOTS.forEach(function(s){var key=tn+":"+s[0],lg=S.runs[key]||{};
       if(s[0]==="cf"){if(lg.min||lg.note)rows.push(["CrossFit","T"+tw,dispDay(tn,"Tue"),lg.note||"","","","","",lg.min||"","",key]);return;}
@@ -1271,9 +1263,9 @@ function renderTri(){
   document.getElementById("app").innerHTML=
   '<div class="eyebrow">Triathlon Block · MetaSprint</div>'+
   '<h1>The Tri</h1>'+
-  '<p class="lead">Sixteen weeks from the half to the start line. Two swims, a ride, a brick, two runs and one gym day.</p>'+
+  '<p class="lead">Fifteen weeks from the half to the start line. Two swims, a ride, a brick, two runs and one gym day.</p>'+
   '<div class="count"><div><div class="cdays">'+(d2r>0?d2r:0)+'</div><div class="clbl">'+(d2r>0?"days to go":d2r===0?"race day":"done")+'</div></div>'+
-  '<div class="cright"><div class="crace">Sun 28 Mar · '+TRI.event+'</div><div class="cmeta">'+TRI.name+'</div><div class="cmeta">'+TRI.meta+'</div><div class="cmeta">'+TRI.tbc+'</div></div></div>'+
+  '<div class="cright"><div class="crace">Sun 21 Mar · '+TRI.event+'</div><div class="cmeta">'+TRI.name+'</div><div class="cmeta">'+TRI.meta+'</div><div class="cmeta">'+TRI.tbc+'</div></div></div>'+
   rewardHTML()+
   maxesHTML("Strength can build again in December and January. When a top set feels easy, raise that max.")+
   stripHTML()+
@@ -1293,7 +1285,7 @@ function renderTri(){
   '<div class="ref"><button data-act="ref">How this plan works<span>'+(S.ref?'▲':'▼')+'</span></button>'+
   (S.ref?'<div class="refbody">'+
     '<h4>The race</h4>'+
-    '<p>The MetaSprint Series triathlon at East Coast Park: a <span class="a">750 m sea swim, 20 km bike and 5 km run</span>. The 2027 date and distances aren\'t announced yet. The 2026 race was on Sun 29 Mar, so the plan counts down to Sun 28 Mar 2027. If the date or the distances turn out different, the plan needs adjusting to match.</p>'+
+    '<p>The MetaSprint Series triathlon at East Coast Park: a <span class="a">750 m sea swim, 20 km bike and 5 km run</span>. It\'s on <span class="a">Sun 21 Mar 2027</span>. The plan assumes the Sprint category; if you enter a different one, the distances and sessions need adjusting to match.</p>'+
     '<h4>Built for you</h4>'+
     '<p>Your half-marathon block gives you a strong running engine, so the run stays at two sessions: the hard one on Thursday with your friend, and an easy long run with the group on Sunday. The swim and the bike are where the time is: two swims and two rides a week, with technique first. Strength keeps its Tuesday slot (or a CrossFit class if you prefer), with exercises chosen for your strain history. Wednesday\'s ride can be on a spin or stationary bike; the Saturday bricks from week 6 and the week 13 rehearsal are best done outside on the bike you\'ll race.</p>'+
     '<h4>Easy most of the time</h4>'+
