@@ -197,10 +197,9 @@
 const RACE={name:"BYD Singapore International Marathon",event:"Half Marathon · 21.1 km",date:"2026-12-06",meta:"F1 Pit Building → National Stadium · 3h45 cut-off"};
 const START="2026-09-28"; // Monday of week 1
 const BLOCK="hm26";
-// After the half: the MetaSprint Series triathlon on Sun 21 Mar 2027. Sprint distance is assumed until the
-// category is confirmed.
-const TRI={name:"MetaSprint Series Triathlon",event:"Sprint triathlon",date:"2027-03-21",
-  meta:"East Coast Park · 750 m sea swim · 20 km bike · 5 km run",tbc:"Sprint distances assumed until you confirm your category"};
+// After the half: the MetaSprint Series triathlon on Sun 21 Mar 2027, XL category (1.5 km / 40 km / 10 km).
+const TRI={name:"MetaSprint Series Triathlon",event:"XL triathlon",date:"2027-03-21",
+  meta:"East Coast Park · 1.5 km sea swim · 40 km bike · 10 km run",tbc:"Bike cut-off: 38 km within 2 h 05 of your start"};
 const TRI_START="2026-12-07"; // the Monday after the half
 const TBLOCK="tri";
 function isTriN(n){return typeof n==="string"&&n.charAt(0)==="t";}
@@ -233,6 +232,12 @@ WEEKS[2].lp=.675;WEEKS[2].ls=2;WEEKS[3].lp=.75;WEEKS[3].ls=3;
 // Week 6's strength session was missed. Week 7 lifts at a normal load (the runs are on cutback) instead of
 // the planned cutback load; nothing is doubled up to make up for it.
 WEEKS[6].lp=.75;WEEKS[6].ls=3;
+// Right knee feels like it could give way (from 10 Nov): no intervals, sprints or strides through race week.
+// The Thursday run becomes an easy run, the squat drops its top triple and goes lighter.
+const KNEE_FROM=7,KNEE_TO=10;
+function kneeWeek(n){return typeof n==="number"&&n>=KNEE_FROM&&n<=KNEE_TO;}
+const KNEE_STOP="Stop and walk the moment the knee wobbles, feels like it might give way, or swells afterwards.";
+[[7,6],[8,7],[9,6],[10,4]].forEach(function(x){WEEKS[x[0]-1].q={n:"Easy run",s:x[1]+" km easy",d:"No intervals while the knee is unsure."};});
 function lPct(w){return w.lp!=null?w.lp:w.pct;}
 function lSets(w){return w.ls||w.sets;}
 const RACE_WEEK=WEEKS.length; // race week is always the last week
@@ -297,6 +302,16 @@ const LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big 3 (
   feel:"Strong and crisp, not exhausting. You should leave feeling you could do more.",
   why:"One session a week holds your strength through the race build. The heavy top set keeps the strength; the low volume keeps your legs fresh for running. Your upper body can keep building — when a top set or every set of 6 feels easy, raise that max.",
   total:"about 60–70 min"};
+// Knee weeks: the quality run is an easy run.
+[7,8,9,10].forEach(function(n){var km=WEEKS[n-1].q.s.split(" ")[0],race=n===RACE_WEEK;
+  QHOW[n]={sum:race?"Easy "+km+" km, three days before the race. No race-pace work unless the knee feels completely solid.":"Easy "+km+" km instead of intervals, while the knee is unsure.",
+    steps:["Pick a flat route on a smooth surface — avoid stairs, steep downhills and uneven ground.","Run "+km+" km at an easy, conversational pace. Shorter, quicker steps put less load through the knee.",
+      race?"If the knee feels completely solid, add 3 × 1 min at half-marathon pace near the end. Any doubt, skip it.":"No strides or surges. Run with your friend while they do their session, or meet them for the warm-up and cool-down.",KNEE_STOP],
+    feel:"Easy the whole way. The knee should feel steady from the first step to the last.",
+    why:"Intervals and sprints put the biggest twisting and braking loads through the knee. Easy running keeps your fitness for the race while you find out what's going on. A knee that feels like it might give way should be checked by a physio or sports doctor.",
+    total:"about "+Math.round(km*6.5)+" min"};});
+[7,8,9].forEach(function(n){WEEKS[n-1].lnote+=" Knee: pick a flat route. "+KNEE_STOP;});
+WEEKS[9].lnote+=" If the knee still feels unstable in race week, get it checked before you start.";
 function qHow(n,indoor){var h=QHOW[n];if(!indoor)return h;
   return {sum:h.sum,feel:h.feel,why:h.why,total:h.total,
     steps:["On the treadmill: set a 1% incline"+(n===4?".":" and change the speed at the start of each faster section.")].concat(h.steps.filter(function(x){return !/^Walk back/.test(x);}).map(function(x){
@@ -341,7 +356,10 @@ const ACC3=[
  ["Single-arm dumbbell row","3 sets × 8 reps each arm","~16–22kg · one hand and knee on a bench, pull to the hip"],
  ["Calf raise","2 sets × 15 reps","BW or ~20kg · your best insurance against calf and achilles trouble"],
  ["Hanging knee raise","2 sets × 12 reps","BW · add a dumbbell between the feet when 12 is easy"]];
-function mainsFor(n){return n<NEW_FROM?MAINS:[MAINS[0],MAINS[1],OHP,MAINS[2]];}
+const KNEE_SQUAT=Object.assign({},MAINS[0],{top:0,adj:-.05,
+  note:"Knee: no top triple. Go only as deep as feels completely solid; squatting to a bench or box helps. If the knee wobbles or feels like it might give way, stop squatting and do the rest of the session.",
+  fallback:"Box squat to a bench at a depth that feels solid — 3 × 8"});
+function mainsFor(n){return n<NEW_FROM?MAINS:[kneeWeek(n)?KNEE_SQUAT:MAINS[0],MAINS[1],OHP,MAINS[2]];}
 function accFor(n){return n<NEW_FROM?ACC:ACC3;}
 // One-off week rewrites, keyed by week. The October haze weeks were reverted to the normal plan;
 // day-to-day changes now go through "Move days" (S.moves) instead.
@@ -386,6 +404,7 @@ function moveWarnings(n){
 var arranging=false,picked=null;
 function sprintNote(n){
   if(n<NEW_FROM)return "";
+  if(kneeWeek(n))return " No sprints or strides while the knee is unsure — your friend can do theirs, you keep jogging.";
   if(n<=4)return " With your friend: sprints can replace this session — 6–8 × 80–100 m at 85–90%, walking back between each. Never flat-out, never cold.";
   if(n<=8)return " With your friend: do this session first, because it is the half-marathon work, then finish with 4–6 relaxed sprints at about 90%.";
   if(n<RACE_WEEK)return " Finish with a few relaxed sprints.";
@@ -420,6 +439,7 @@ function schedPlan(n){var o=ovr(n);return SCHED.map(function(s){
   if(n<MOB_FROM&&s[0]==="Sat")return ["Sat","Rest","legs up before Sunday",null,"var(--ink4)"];
   if(n<NEW_FROM&&s[0]==="Tue")return ["Tue","Quality run","the hard one","quality","var(--sky)"];
   if(n<NEW_FROM&&s[0]==="Thu")return ["Thu","Strength","one full-body session","lift","var(--amber)"];
+  if(kneeWeek(n)&&s[0]==="Thu")return ["Thu","Easy run","no intervals — knee","quality","var(--green)"];
   if(n>=BOX_END&&s[0]==="Wed")return ["Wed","Easy bike or swim",n===RACE_WEEK?"20 min, loosen up":"30–40 min, replaces boxing","xt","var(--green)"];
   if(n>=BOX_END-1&&n<RACE_WEEK&&s[0]==="Sat")return ["Sat","Rest","long run tomorrow",null,"var(--ink4)"];
   if(n===6&&s[0]==="Sat")return ["Sat","Boxing — very light","skip it if Thursday left you flat",null,"var(--ink2)"];
@@ -466,129 +486,130 @@ function mobHTML(){
     h+='</div>';}
   return h+'</div>';}
 
-// ---- Triathlon block: 15 weeks from the day after the half to the MetaSprint triathlon ----
-// Week shape: Mon technique swim + mobility · Tue strength (or CrossFit) · Wed easy ride · Thu run with your friend ·
-// Fri swim fitness · Sat brick (race-effort ride, then run off the bike) · Sun easy long run with the group.
+// ---- Triathlon block: 15 weeks from the day after the half to the MetaSprint XL triathlon ----
+// XL is 1.5 km swim, 40 km bike, 10 km run, with a cut-off: 38 km of the bike done within 2 h 05 of your start.
+// Week shape: Mon technique swim + mobility · Tue strength (or CrossFit) · Wed endurance ride · Thu run with your friend ·
+// Fri swim fitness · Sat brick (long ride with race-effort blocks, then run off the bike) · Sun easy long run with the group.
 // Only Thursday and Saturday are hard; everything else is easy. Every 4th week is a cutback.
 // Each session: t target, u unit, s one-line spec, st steps, tot total time.
-const RE="Race effort on the bike: hard but steady, the pace you could hold for about 45 min — a few words at a time.";
+const RE="Race effort on the bike: hard but steady, the pace you could hold for the whole 40 km (75–90 min) — short sentences only.";
 const TRI_WEEKS=[
  {n:1,phase:"Recovery",pct:.60,sets:2,lnote:"Light. Bench, overhead press, pull-ups and rows as normal; skip the squat, Romanian deadlift and Nordics if your legs are still sore from the half.",
   note:"Recovery week. Your legs are still repairing from Sunday's half, which takes about a week. Nothing hard, and no running before Thursday.",
   swimA:{t:"20",u:"min",s:"Easy swim, any stroke",st:["Swim easy for 20 min, any stroke. Rest at the wall whenever you like.","No drills and no pace — just loosen up."],tot:"20 min"},
-  bike:{t:"30",u:"min",s:"Easy spin",st:["Ride 30 min easy, on a stationary bike or outside. Light gear, legs spinning freely."],tot:"30 min"},
-  runq:{t:"20–30",u:"min",s:"Easy jog, only if your legs feel normal",st:["Still sore? Swap this for another easy ride, or rest.","Otherwise jog 20–30 min easy with your friend. No speed this week."],tot:"30 min"},
-  swimB:{t:"20–30",u:"min",s:"Easy swim",st:["Swim easy and continuously, any stroke, for 20–30 min."],tot:"30 min"},
-  brick:{title:"Easy ride",t:"45",u:"min",s:"no run this week",st:["Ride 45 min easy.","No run off the bike this week."],tot:"45 min"},
-  long:{km:5,s:"easy, only if nothing hurts",note:"Your first run with the group since the race. Easy, and only if nothing hurts."}},
+  bike:{t:"40",u:"min",s:"Easy spin",st:["Ride 40 min easy, on a stationary bike or outside. Light gear, legs spinning freely."],tot:"40 min"},
+  runq:{t:"20–30",u:"min",s:"Easy jog, only if your legs and knee feel normal",st:["Still sore, or the knee isn't right? Swap this for another easy ride, or rest.","Otherwise jog 20–30 min easy with your friend. No speed this week."],tot:"30 min"},
+  swimB:{t:"30",u:"min",s:"Easy swim",st:["Swim easy and continuously, any stroke, for 30 min."],tot:"30 min"},
+  brick:{title:"Easy ride",t:"60",u:"min",s:"no run this week",st:["Ride 60 min easy.","No run off the bike this week."],tot:"60 min"},
+  long:{km:6,s:"easy, only if nothing hurts",note:"Your first run with the group since the race. Easy, and only if nothing hurts."}},
  {n:2,phase:"Base",pct:.70,sets:3,
-  note:"Base. Everything easy except Thursday. Learn the swim drills and get used to riding.",
-  swimA:{t:"1,000",u:"m",s:"Technique: drills and easy swimming",st:["300 m easy, any stroke.","8 × 25 m drills with 20 s rest, alternating catch-up and side kick (see below).","4 × 50 m smooth freestyle with 20 s rest. Long strokes, and breathe out fully underwater.","200 m easy."],tot:"about 30 min"},
-  bike:{t:"45",u:"min",s:"Easy ride with spin-ups",st:["10 min easy.","5 × 30 s high cadence — light gear, legs spinning fast (100+ rpm if you can see it), 2 min easy between.","Ride easy to finish."],tot:"45 min"},
-  runq:{t:"8×1",u:"min",s:"Fartlek with your friend",st:["Run 10 min easy.","8 × 1 min at 5k effort, with 1 min easy jogging between.","10 min easy."],tot:"about 40 min"},
-  swimB:{t:"1,000",u:"m",s:"Endurance",st:["300 m easy.","4 × 100 m steady, 20 s rest.","4 × 50 m drill of your choice.","100 m easy."],tot:"about 30 min"},
-  brick:{title:"First brick",t:"45+10",u:"min",s:"easy ride → easy run",st:["Ride 45 min easy.","Change into running shoes as quickly as you can — that's transition practice.","Run 10 min easy straight off the bike. Short, quick steps for the first few minutes."],tot:"about 60 min"},
+  note:"Base. Everything easy except Thursday. Learn the swim drills and get used to longer rides.",
+  swimA:{t:"1,500",u:"m",s:"Technique: drills and easy swimming",st:["400 m easy, any stroke.","8 × 25 m drills with 20 s rest, alternating catch-up and side kick (see below).","6 × 50 m smooth freestyle with 20 s rest. Long strokes, and breathe out fully underwater.","4 × 100 m steady, 20 s rest.","200 m easy."],tot:"about 45 min"},
+  bike:{t:"60",u:"min",s:"Endurance ride with spin-ups",st:["15 min easy.","6 × 30 s high cadence — light gear, legs spinning fast (100+ rpm if you can see it), 2 min easy between.","Ride easy to finish."],tot:"60 min"},
+  runq:{t:"8×1",u:"min",s:"Fartlek with your friend",st:["Run 10 min easy.","8 × 1 min at 10k effort, with 1 min easy jogging between.","10 min easy.","Knee not right yet? Run it all easy."],tot:"about 40 min"},
+  swimB:{t:"1,600",u:"m",s:"Endurance",st:["400 m easy.","6 × 150 m steady, 20 s rest.","4 × 50 m drill of your choice.","100 m easy."],tot:"about 45 min"},
+  brick:{title:"First brick",t:"75+10",u:"min",s:"easy ride → easy run",st:["Ride 75 min easy.","Change into running shoes as quickly as you can — that's transition practice.","Run 10 min easy straight off the bike. Short, quick steps for the first few minutes."],tot:"about 1 h 30"},
   long:{km:8,s:"easy, with the group"}},
  {n:3,phase:"Base",pct:.725,sets:3,
   note:"Base. Christmas week: if a session has to go, drop Monday's swim first, never the brick.",
-  swimA:{t:"1,100",u:"m",s:"Technique",st:["300 m easy.","8 × 25 m drills with 20 s rest: fingertip drag and catch-up.","6 × 50 m freestyle breathing every 3 strokes (both sides), 20 s rest.","200 m easy."],tot:"about 35 min"},
-  bike:{t:"50",u:"min",s:"Easy ride with spin-ups",st:["10 min easy.","6 × 30 s high cadence, 2 min easy between.","Ride easy to finish."],tot:"50 min"},
-  runq:{t:"6×2",u:"min",s:"Intervals with your friend",st:["Run 10 min easy, then 3 strides.","6 × 2 min at 5k effort, with 90 s easy jogging between.","10 min easy."],tot:"about 45 min"},
-  swimB:{t:"1,200",u:"m",s:"Endurance",st:["300 m easy.","3 × 200 m steady, 30 s rest.","4 × 50 m a little quicker, 20 s rest.","100 m easy."],tot:"about 35 min"},
-  brick:{t:"60+10",u:"min",s:"ride with race-effort blocks → easy run",st:["Ride 15 min easy.","3 × 5 min at race effort, with 3 min easy between.","Ride easy to 60 min.","Run 10 min easy off the bike."],tot:"about 75 min"},
+  swimA:{t:"1,700",u:"m",s:"Technique",st:["400 m easy.","8 × 25 m drills with 20 s rest: fingertip drag and catch-up.","8 × 50 m freestyle breathing every 3 strokes (both sides), 20 s rest.","4 × 100 m steady, 20 s rest.","200 m easy."],tot:"about 50 min"},
+  bike:{t:"70",u:"min",s:"Endurance ride with spin-ups",st:["15 min easy.","6 × 30 s high cadence, 2 min easy between.","Ride easy to finish."],tot:"70 min"},
+  runq:{t:"6×3",u:"min",s:"Intervals with your friend",st:["Run 10 min easy, then 3 strides.","6 × 3 min at 10k effort, with 90 s easy jogging between.","10 min easy.","Knee not right yet? Run it all easy."],tot:"about 50 min"},
+  swimB:{t:"1,800",u:"m",s:"Endurance",st:["400 m easy.","4 × 300 m steady, 30 s rest.","100 m easy."],tot:"about 50 min"},
+  brick:{t:"90+15",u:"min",s:"ride with race-effort blocks → easy run",st:["Ride 20 min easy.","3 × 8 min at race effort, with 4 min easy between.","Ride easy to 90 min.","Run 15 min easy off the bike."],tot:"about 1 h 50"},
   long:{km:10,s:"easy, with the group"}},
  {n:4,phase:"Cutback",pct:.65,sets:2,
   note:"Cutback. Less of everything so the first three weeks sink in. New Year's Day is a free pass.",
-  swimA:{t:"800",u:"m",s:"Technique, short",st:["200 m easy.","8 × 25 m drills, 20 s rest.","4 × 50 m smooth, 20 s rest.","100 m easy."],tot:"25 min"},
-  bike:{t:"40",u:"min",s:"Easy spin",st:["Ride 40 min easy, with 4 × 30 s high cadence somewhere in the middle."],tot:"40 min"},
-  runq:{t:"5",u:"km",s:"Easy run and strides",st:["Run 5 km easy.","6 × 20 s strides: build up, hold fast-but-relaxed, ease off. Walk back between each."],tot:"about 35 min"},
-  swimB:{t:"800",u:"m",s:"Continuous, easy",st:["Swim 800 m without stopping, at an easy pace. A quick breather at the wall is fine if you need one."],tot:"25 min"},
-  brick:{title:"Easy ride",t:"45",u:"min",s:"no run this week",st:["Ride 45 min easy. No run off the bike in a cutback week."],tot:"45 min"},
+  swimA:{t:"1,200",u:"m",s:"Technique, short",st:["300 m easy.","8 × 25 m drills, 20 s rest.","6 × 50 m smooth, 20 s rest.","400 m easy."],tot:"35 min"},
+  bike:{t:"50",u:"min",s:"Easy spin",st:["Ride 50 min easy, with 4 × 30 s high cadence somewhere in the middle."],tot:"50 min"},
+  runq:{t:"6",u:"km",s:"Easy run and strides",st:["Run 6 km easy.","6 × 20 s strides: build up, hold fast-but-relaxed, ease off. Walk back between each. Skip them if the knee isn't fully right."],tot:"about 40 min"},
+  swimB:{t:"1,200",u:"m",s:"Continuous, easy",st:["Swim 1,200 m without stopping, at an easy pace. A quick breather at the wall is fine if you need one."],tot:"35 min"},
+  brick:{title:"Easy ride",t:"75",u:"min",s:"no run this week",st:["Ride 75 min easy. No run off the bike in a cutback week."],tot:"75 min"},
   long:{km:8,s:"easy, cutback week"}},
  {n:5,phase:"Base",pct:.75,sets:3,
-  note:"Benchmark week. Friday's 750 m time trial gives you your race pace in the water.",
-  swimA:{t:"1,200",u:"m",s:"Technique and breathing both sides",st:["300 m easy.","8 × 25 m drills: side kick and fingertip drag, 20 s rest.","6 × 50 m breathing every 3 strokes, 20 s rest.","4 × 50 m smooth, 20 s rest.","100 m easy."],tot:"about 35 min"},
-  bike:{t:"55",u:"min",s:"Easy ride with tempo",st:["15 min easy.","2 × 8 min tempo — moderately hard, short sentences only — with 4 min easy between.","Ride easy to finish."],tot:"55 min"},
-  runq:{t:"5×3",u:"min",s:"Intervals with your friend",st:["Run 10 min easy, then 3 strides.","5 × 3 min at 5k effort, with 2 min easy jogging between.","10 min easy."],tot:"about 45 min"},
-  swimB:{t:"750",u:"m TT",s:"Time trial: your race-pace benchmark",st:["300 m easy, then 4 × 25 m building speed.","Swim 750 m at the fastest pace you can hold evenly from start to finish. Note the time.","Divide the time by 7.5: that's your race pace per 100 m. Log the time below.","200 m easy."],tot:"about 35 min"},
-  brick:{t:"60+15",u:"min",s:"race-effort blocks → run",st:["Ride 15 min easy.","2 × 10 min at race effort, with 5 min easy between.","Ride easy to 60 min.","Run 15 min off the bike: the first 5 min at 5k effort, then easy."],tot:"about 80 min"},
-  long:{km:10,s:"easy, with the group"}},
+  note:"Benchmark week. Friday's 1,000 m time trial gives you your race pace in the water.",
+  swimA:{t:"1,800",u:"m",s:"Technique and breathing both sides",st:["400 m easy.","8 × 25 m drills: side kick and fingertip drag, 20 s rest.","8 × 50 m breathing every 3 strokes, 20 s rest.","4 × 100 m smooth, 20 s rest.","200 m easy."],tot:"about 50 min"},
+  bike:{t:"75",u:"min",s:"Endurance ride with tempo",st:["15 min easy.","2 × 12 min tempo — moderately hard, short sentences only — with 5 min easy between.","Ride easy to finish."],tot:"75 min"},
+  runq:{t:"4×6",u:"min",s:"10k-effort repeats with your friend",st:["Run 10 min easy, then 3 strides.","4 × 6 min at 10k effort, with 2 min easy jogging between.","10 min easy."],tot:"about 55 min"},
+  swimB:{t:"1,000",u:"m TT",s:"Time trial: your race-pace benchmark",st:["400 m easy, then 4 × 25 m building speed.","Swim 1,000 m at the fastest pace you can hold evenly from start to finish. Note the time.","Divide the time by 10: that's your pace per 100 m. Your 1,500 m race pace will be a few seconds per 100 m slower. Log the time below.","200 m easy."],tot:"about 45 min"},
+  brick:{t:"105+20",u:"min",s:"race-effort blocks → run",st:["Ride 20 min easy.","3 × 10 min at race effort, with 5 min easy between.","Ride easy to 1 h 45.","Run 20 min off the bike: the first 10 min at 10k effort, then easy."],tot:"about 2 h 10"},
+  long:{km:11,s:"easy, with the group"}},
  {n:6,phase:"Build",pct:.775,sets:3,
   note:"Build. The Saturday brick and Thursday run get race-specific; everything else stays easy.",
-  swimA:{t:"1,200",u:"m",s:"Technique and sighting",st:["300 m easy.","6 × 25 m drills, 20 s rest.","6 × 50 m with sighting, 20 s rest: every 6 strokes, lift your eyes just above the water and look forward, then turn to breathe as normal.","4 × 50 m smooth.","100 m easy."],tot:"about 35 min"},
-  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","3 × 8 min tempo, with 3 min easy between.","Ride easy to finish."],tot:"60 min"},
-  runq:{t:"5×1",u:"km",s:"1 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","5 × 1 km at 5k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 50 min"},
-  swimB:{t:"1,400",u:"m",s:"Race-pace 100s",st:["300 m easy.","4 × 50 m drill.","8 × 100 m at your 750 m race pace, 15 s rest.","200 m easy."],tot:"about 40 min"},
-  brick:{t:"70+15",u:"min",s:"race effort → run at 5k effort",st:["Ride 15 min easy.","3 × 8 min at race effort, with 3 min easy between.","Ride easy to 70 min.","Run 15 min off the bike: the first 10 min at 5k effort, then 5 min easy."],tot:"about 90 min"},
-  long:{km:11,s:"easy, with the group"}},
+  swimA:{t:"1,900",u:"m",s:"Technique and sighting",st:["400 m easy.","6 × 25 m drills, 20 s rest.","8 × 50 m with sighting, 20 s rest: every 6 strokes, lift your eyes just above the water and look forward, then turn to breathe as normal.","4 × 150 m steady, 20 s rest.","200 m easy."],tot:"about 55 min"},
+  bike:{t:"75",u:"min",s:"Endurance ride with tempo",st:["15 min easy.","3 × 10 min tempo, with 4 min easy between.","Ride easy to finish."],tot:"75 min"},
+  runq:{t:"4×2",u:"km",s:"2 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","4 × 2 km at 10k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 60 min"},
+  swimB:{t:"2,200",u:"m",s:"Race-pace 100s",st:["400 m easy.","4 × 50 m drill.","14 × 100 m at your race pace, 15 s rest.","200 m easy."],tot:"about 55 min"},
+  brick:{t:"120+20",u:"min",s:"race effort → run at 10k effort",st:["Ride 20 min easy.","2 × 20 min at race effort, with 5 min easy between.","Ride easy to 2 h.","Run 20 min off the bike: the first 10 min at 10k effort, then easy."],tot:"about 2 h 25"},
+  long:{km:12,s:"easy, with the group"}},
  {n:7,phase:"Build",pct:.775,sets:3,
   note:"Build. Same shape as last week, a little longer.",
-  swimA:{t:"1,300",u:"m",s:"Technique and sighting",st:["300 m easy.","6 × 25 m drills, 20 s rest.","8 × 50 m with sighting every 6 strokes, breathing every 3, 20 s rest.","4 × 50 m smooth.","100 m easy."],tot:"about 40 min"},
-  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","4 × 6 min tempo, with 2 min easy between.","Ride easy to finish."],tot:"60 min"},
-  runq:{t:"3×1.6",u:"km",s:"Mile repeats with your friend",st:["Run 10 min easy, then 3 strides.","3 × 1.6 km between 10k and 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 50 min"},
-  swimB:{t:"1,400",u:"m",s:"Race-pace 200s",st:["300 m easy.","4 × 200 m at race pace, 20 s rest.","4 × 50 m fast, 20 s rest.","200 m easy."],tot:"about 40 min"},
-  brick:{t:"75+20",u:"min",s:"race effort → run at 5k effort",st:["Ride 15 min easy.","2 × 15 min at race effort, with 5 min easy between.","Ride easy to 75 min.","Run 20 min off the bike: the first 10 min at 5k effort, then easy."],tot:"about 1 h 40"},
-  long:{km:12,s:"easy, with the group"}},
+  swimA:{t:"2,000",u:"m",s:"Technique and sighting",st:["400 m easy.","6 × 25 m drills, 20 s rest.","8 × 50 m with sighting every 6 strokes, breathing every 3, 20 s rest.","3 × 200 m steady, 20 s rest.","300 m easy."],tot:"about 55 min"},
+  bike:{t:"80",u:"min",s:"Endurance ride with tempo",st:["15 min easy.","2 × 15 min tempo, with 5 min easy between.","Ride easy to finish."],tot:"80 min"},
+  runq:{t:"3×3",u:"km",s:"3 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","3 × 3 km at 10k pace, with 2–3 min easy jogging between.","10 min easy."],tot:"about 65 min"},
+  swimB:{t:"2,400",u:"m",s:"Race-pace 300s",st:["400 m easy.","5 × 300 m at race pace, 30 s rest.","4 × 50 m fast, 20 s rest.","300 m easy."],tot:"about 60 min"},
+  brick:{t:"135+25",u:"min",s:"race effort → run at 10k effort",st:["Ride 20 min easy.","3 × 15 min at race effort, with 5 min easy between.","Ride easy to 2 h 15.","Run 25 min off the bike: the first 15 min at 10k effort, then easy."],tot:"about 2 h 45"},
+  long:{km:13,s:"easy, with the group"}},
  {n:8,phase:"Cutback",pct:.675,sets:2,
-  note:"Cutback, and a re-test: swim the 750 m again on Friday and compare it with week 5.",
-  swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","8 × 25 m drills.","4 × 50 m smooth.","200 m easy."],tot:"30 min"},
-  bike:{t:"45",u:"min",s:"Easy spin",st:["Ride 45 min easy, with 4 × 30 s high cadence."],tot:"45 min"},
-  runq:{t:"6",u:"km",s:"Easy run and strides",st:["Run 6 km easy.","6 × 20 s strides, walking back between each."],tot:"about 40 min"},
-  swimB:{t:"750",u:"m TT",s:"Time trial #2",st:["300 m easy, then 4 × 25 m building speed.","Swim 750 m as fast as you can hold evenly. Note the time and compare it with week 5.","200 m easy."],tot:"about 35 min"},
-  brick:{t:"60+10",u:"min",s:"easy ride → easy run",st:["Ride 60 min easy.","Run 10 min easy off the bike."],tot:"about 75 min"},
-  long:{km:9,s:"easy, cutback week"}},
+  note:"Cutback, and a re-test: swim the 1,000 m again on Friday and compare it with week 5.",
+  swimA:{t:"1,400",u:"m",s:"Technique, short",st:["400 m easy.","8 × 25 m drills.","6 × 50 m smooth.","500 m easy."],tot:"40 min"},
+  bike:{t:"60",u:"min",s:"Easy spin",st:["Ride 60 min easy, with 4 × 30 s high cadence."],tot:"60 min"},
+  runq:{t:"7",u:"km",s:"Easy run and strides",st:["Run 7 km easy.","6 × 20 s strides, walking back between each."],tot:"about 45 min"},
+  swimB:{t:"1,000",u:"m TT",s:"Time trial #2",st:["400 m easy, then 4 × 25 m building speed.","Swim 1,000 m as fast as you can hold evenly. Note the time and compare it with week 5.","200 m easy."],tot:"about 45 min"},
+  brick:{t:"90+15",u:"min",s:"easy ride → easy run",st:["Ride 90 min easy.","Run 15 min easy off the bike."],tot:"about 1 h 50"},
+  long:{km:10,s:"easy, cutback week"}},
  {n:9,phase:"Build",pct:.775,sets:3,
-  note:"Build. Chinese New Year is on the weekend: if visiting gets in the way, do the brick on Friday and move Friday's swim to Monday.",
-  swimA:{t:"1,300",u:"m",s:"Technique and sighting",st:["300 m easy.","6 × 25 m drills.","8 × 50 m with sighting, 20 s rest.","4 × 50 m smooth.","100 m easy."],tot:"about 40 min"},
-  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","2 × 12 min tempo, with 4 min easy between.","Ride easy to finish."],tot:"60 min"},
-  runq:{t:"6×800",u:"m",s:"800s with your friend",st:["Run 10 min easy, then 3 strides.","6 × 800 m at 5k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 50 min"},
-  swimB:{t:"1,500",u:"m",s:"Race-pace 300s",st:["300 m easy.","3 × 300 m at race pace, 30 s rest.","4 × 50 m fast, 20 s rest.","200 m easy."],tot:"about 45 min"},
-  brick:{t:"75+20",u:"min",s:"above-race-effort blocks → run",st:["Ride 15 min easy.","5 × 4 min a little above race effort, with 2 min easy between.","Ride easy to 75 min.","Run 20 min off the bike: the first 10 min at 5k effort, then easy."],tot:"about 1 h 40"},
-  long:{km:12,s:"easy, with the group"}},
+  note:"Build, and your first open-water swim. Chinese New Year is on the weekend: if visiting gets in the way, do the brick on Friday and swim on Monday instead.",
+  swimA:{t:"2,000",u:"m",s:"Technique and sighting (pool)",st:["400 m easy.","6 × 25 m drills.","4 × 200 m with sighting every 6 strokes, 20 s rest.","4 × 50 m fast.","400 m easy."],tot:"about 55 min"},
+  bike:{t:"80",u:"min",s:"Endurance ride with tempo",st:["15 min easy.","2 × 20 min tempo, with 5 min easy between.","Ride easy to finish."],tot:"80 min"},
+  runq:{t:"5×1.6",u:"km",s:"Mile repeats with your friend",st:["Run 10 min easy, then 3 strides.","5 × 1.6 km at 10k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 60 min"},
+  swimB:{open:1,t:"35",u:"min",s:"Open water #1 — with a buddy",st:["Go with a buddy to a lifeguarded beach (East Coast or Sentosa), early morning.","Swim 5 min easy along the shore to get used to the salt water and the chop.","4 × 5 min steady with sighting every 6–8 strokes — pick a building or tree on shore — with 1 min easy between.","Practise 2 beach starts: wade in, start swimming hard for 30 s, then settle into your rhythm.","Swim easy back.","No sea this week? Swim 2,400 m in the pool instead: 4 × 500 m continuous with sighting, 30 s rest."],tot:"about 40 min"},
+  brick:{t:"135+25",u:"min",s:"above-race-effort blocks → run",st:["Ride 20 min easy.","6 × 5 min a little above race effort, with 3 min easy between.","Ride easy to 2 h 15.","Run 25 min off the bike: the first 15 min at 10k effort, then easy."],tot:"about 2 h 45"},
+  long:{km:13,s:"easy, with the group"}},
  {n:10,phase:"Build",pct:.775,sets:2,
-  note:"First open-water swim this week. Always with a buddy, at a lifeguarded beach, in daylight.",
-  swimA:{t:"1,300",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting every 6 strokes, 20 s rest.","4 × 50 m smooth.","100 m easy."],tot:"about 40 min"},
-  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","3 × 8 min tempo, with 3 min easy between.","Ride easy to finish."],tot:"60 min"},
-  runq:{t:"4×1.2",u:"km",s:"1.2 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","4 × 1.2 km at 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 50 min"},
-  swimB:{open:1,t:"25",u:"min",s:"Open water #1 — with a buddy",st:["Go with a buddy to a lifeguarded beach (East Coast or Sentosa), early morning.","Swim 5 min easy along the shore to get used to the salt water and the chop.","4 × 3 min steady with sighting every 6–8 strokes — pick a building or tree on shore — with 1 min easy between.","Practise 2 beach starts: wade in, start swimming hard for 30 s, then settle into your rhythm.","Swim easy back.","No sea this week? Swim 1,500 m in the pool instead: 3 × 400 m continuous with sighting, 30 s rest."],tot:"about 30 min"},
-  brick:{t:"80+20",u:"min",s:"20 min race effort → run at 5k effort",st:["Ride 20 min easy.","20 min at race effort.","Ride easy to 80 min.","Run 20 min off the bike: the first 15 min at 5k effort, then easy."],tot:"about 1 h 45"},
-  long:{km:12,s:"easy, with the group"}},
+  note:"Build. Open water every Friday from now on. Always with a buddy, at a lifeguarded beach, in daylight.",
+  swimA:{t:"2,000",u:"m",s:"Technique and sighting (pool)",st:["400 m easy.","6 × 25 m drills.","4 × 200 m with sighting, 20 s rest.","4 × 50 m fast.","400 m easy."],tot:"about 55 min"},
+  bike:{t:"90",u:"min",s:"Endurance ride with tempo",st:["15 min easy.","3 × 15 min tempo, with 5 min easy between.","Ride easy to finish."],tot:"90 min"},
+  runq:{t:"2×4",u:"km",s:"Tempo with your friend",st:["Run 10 min easy, then 3 strides.","2 × 4 km at 10k pace, with 3 min easy jogging between.","10 min easy."],tot:"about 65 min"},
+  swimB:{open:1,t:"40",u:"min",s:"Open water #2 — with a buddy",st:["Lifeguarded beach, with a buddy, early morning.","5 min easy.","3 × 8 min at race effort with sighting every 6–8 strokes, 2 min easy between.","2 beach starts.","Easy to finish.","No sea? 2,500 m in the pool: 3 × 600 m at race pace with sighting, 1 min rest."],tot:"about 45 min"},
+  brick:{t:"150+25",u:"min",s:"race effort → run at 10k effort",st:["Ride 20 min easy.","2 × 25 min at race effort, with 5 min easy between.","Ride easy to 2 h 30.","Run 25 min off the bike: the first 15 min at 10k effort, then easy."],tot:"about 3 h"},
+  long:{km:14,s:"easy, with the group"}},
  {n:11,phase:"Build",pct:.75,sets:2,
   note:"Last build week. The brick is the biggest of the block.",
-  swimA:{t:"1,400",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting, 20 s rest.","4 × 50 m fast, 20 s rest.","200 m easy."],tot:"about 40 min"},
-  bike:{t:"60",u:"min",s:"Easy ride with tempo",st:["15 min easy.","2 × 15 min tempo, with 5 min easy between.","Ride easy to finish."],tot:"60 min"},
-  runq:{t:"3×2",u:"km",s:"2 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","3 × 2 km at 10k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 55 min"},
-  swimB:{open:1,t:"25",u:"min",s:"Open water #2 — with a buddy",st:["Lifeguarded beach, with a buddy, early morning.","5 min easy.","2 × 10 min at race effort with sighting every 6–8 strokes, 2 min easy between.","2 beach starts.","Easy to finish.","No sea? 1,500 m in the pool: 2 × 600 m at race pace with sighting, 1 min rest."],tot:"about 30 min"},
-  brick:{t:"90+20",u:"min",s:"2 × 20 min race effort → run",st:["Ride 20 min easy.","2 × 20 min at race effort, with 5 min easy between.","Ride easy to 90 min.","Run 20 min off the bike: the first 10 min at 5k effort, then easy."],tot:"about 1 h 55"},
-  long:{km:12,s:"easy, with the group"}},
+  swimA:{t:"2,100",u:"m",s:"Technique and sighting (pool)",st:["400 m easy.","6 × 25 m drills.","3 × 300 m with sighting, 20 s rest.","4 × 50 m fast, 20 s rest.","400 m easy."],tot:"about 55 min"},
+  bike:{t:"90",u:"min",s:"Endurance ride with tempo",st:["15 min easy.","2 × 25 min tempo, with 5 min easy between.","Ride easy to finish."],tot:"90 min"},
+  runq:{t:"3×3",u:"km",s:"3 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","3 × 3 km at 10k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 65 min"},
+  swimB:{open:1,t:"1,500",u:"m",s:"Open water: race distance",st:["Lifeguarded beach, with a buddy.","5 min easy.","Swim 1,500 m continuously at a steady effort, sighting every 6–8 strokes. A watch or a known course helps; otherwise swim for about your expected race time.","Easy to finish."],tot:"about 45 min"},
+  brick:{t:"150+30",u:"min",s:"race-distance ride → run",st:["Ride 20 min easy.","40 km at race effort — the full race distance. Note your time: it tells you where you are against the bike cut-off.","Ride easy to 2 h 30.","Run 30 min off the bike: the first 20 min at 10k effort, then easy."],tot:"about 3 h"},
+  long:{km:14,s:"easy, with the group"}},
  {n:12,phase:"Cutback",pct:.675,sets:2,
-  note:"Cutback before the final push.",
-  swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","8 × 25 m drills.","4 × 50 m smooth.","200 m easy."],tot:"30 min"},
-  bike:{t:"45",u:"min",s:"Easy spin",st:["Ride 45 min easy, with 4 × 30 s high cadence."],tot:"45 min"},
-  runq:{t:"6",u:"km",s:"Easy run and strides",st:["Run 6 km easy.","6 × 20 s strides, walking back between each."],tot:"about 40 min"},
-  swimB:{t:"1,000",u:"m",s:"Easy-steady, pool",st:["Swim 1,000 m continuously, easy for the first half and steady for the second."],tot:"30 min"},
-  brick:{t:"60+10",u:"min",s:"easy ride → easy run",st:["Ride 60 min easy.","Run 10 min easy off the bike."],tot:"about 75 min"},
-  long:{km:9,s:"easy, cutback week"}},
+  note:"Cutback before the rehearsal.",
+  swimA:{t:"1,400",u:"m",s:"Technique, short",st:["400 m easy.","8 × 25 m drills.","6 × 50 m smooth.","500 m easy."],tot:"40 min"},
+  bike:{t:"60",u:"min",s:"Easy spin",st:["Ride 60 min easy, with 4 × 30 s high cadence."],tot:"60 min"},
+  runq:{t:"7",u:"km",s:"Easy run and strides",st:["Run 7 km easy.","6 × 20 s strides, walking back between each."],tot:"about 45 min"},
+  swimB:{open:1,t:"30",u:"min",s:"Open water, easy-steady",st:["Lifeguarded beach, with a buddy.","Swim 30 min, easy for the first half and steady for the second, sighting as you go."],tot:"30 min"},
+  brick:{t:"90+15",u:"min",s:"easy ride → easy run",st:["Ride 90 min easy.","Run 15 min easy off the bike."],tot:"about 1 h 50"},
+  long:{km:10,s:"easy, cutback week"}},
  {n:13,phase:"Peak",pct:.75,sets:2,
-  note:"Race rehearsal on Saturday: the full distance on the bike and run, in race kit, after your race breakfast, with transition set up like race day.",
-  swimA:{t:"1,400",u:"m",s:"Technique and sighting (pool)",st:["300 m easy.","6 × 25 m drills.","4 × 100 m with sighting, 20 s rest.","4 × 50 m fast.","200 m easy."],tot:"about 40 min"},
-  bike:{t:"50",u:"min",s:"Easy ride with spin-ups",st:["Ride 50 min easy, with 5 × 30 s high cadence. Keep it easy — Saturday is the rehearsal."],tot:"50 min"},
-  runq:{t:"5×1",u:"km",s:"1 km repeats with your friend",st:["Run 10 min easy, then 3 strides.","5 × 1 km at 5k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 50 min"},
-  swimB:{open:1,t:"750",u:"m",s:"Open water: race distance",st:["Lifeguarded beach, with a buddy.","5 min easy.","Swim 750 m continuously at race effort, sighting every 6–8 strokes. Your watch or a known course helps; otherwise swim about your 750 m time.","Easy to finish."],tot:"about 30 min"},
-  brick:{title:"Race rehearsal",t:"20+5",u:"km",s:"full bike and run at race effort",st:["Set up a mini transition: bike, helmet, shoes, race belt and a towel.","Ride 20 km at race effort.","Change into running shoes as fast as you can, and time it.","Run 5 km: the first 2 km steady, the last 3 km at 5k effort.","Eat and drink exactly what you will on race day."],tot:"about 75 min"},
-  long:{km:8,s:"easy, the day after the rehearsal"}},
+  note:"Race rehearsal on Saturday: the full bike and most of the run, in race kit, after your race breakfast, with transition set up like race day.",
+  swimA:{t:"2,000",u:"m",s:"Technique and sighting (pool)",st:["400 m easy.","6 × 25 m drills.","4 × 200 m with sighting, 20 s rest.","4 × 50 m fast.","400 m easy."],tot:"about 55 min"},
+  bike:{t:"60",u:"min",s:"Easy ride with spin-ups",st:["Ride 60 min easy, with 5 × 30 s high cadence. Keep it easy — Saturday is the rehearsal."],tot:"60 min"},
+  runq:{t:"5×1.6",u:"km",s:"Mile repeats with your friend",st:["Run 10 min easy, then 3 strides.","5 × 1.6 km at 10k pace, with 90 s easy jogging between.","10 min easy."],tot:"about 60 min"},
+  swimB:{open:1,t:"1,500",u:"m",s:"Open water: race distance at race effort",st:["Lifeguarded beach, with a buddy.","5 min easy.","Swim 1,500 m continuously at race effort, sighting every 6–8 strokes. Note the time.","Easy to finish."],tot:"about 45 min"},
+  brick:{title:"Race rehearsal",t:"40+8",u:"km",s:"full bike and most of the run",st:["Set up a mini transition: bike, helmet, shoes, race belt, drink bottles and a towel.","Ride 40 km at race effort. Drink and eat exactly what you will on race day.","Change into running shoes as fast as you can, and time it.","Run 8 km: the first 3 km steady, then 10k effort.","Compare your 40 km time with week 11 and with the bike cut-off."],tot:"about 2 h 15"},
+  long:{km:10,s:"easy, the day after the rehearsal"}},
  {n:14,phase:"Taper",pct:.675,sets:1,lnote:"Last lift before the race: light, crisp, nowhere near failure. Skip the Nordics this week.",
   note:"Taper. About half the volume, same sharp efforts. Resist adding anything.",
-  swimA:{t:"1,000",u:"m",s:"Technique, short",st:["300 m easy.","6 × 25 m drills.","4 × 50 m at race pace.","100 m easy."],tot:"30 min"},
-  bike:{t:"40",u:"min",s:"Easy ride with race-effort minutes",st:["Ride 40 min easy, with 4 × 1 min at race effort in the middle."],tot:"40 min"},
-  runq:{t:"4×800",u:"m",s:"Sharpener",st:["Run 10 min easy, then 3 strides.","4 × 800 m at 5k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 40 min"},
-  swimB:{open:1,t:"20",u:"min",s:"Open water, easy",st:["Lifeguarded beach, with a buddy.","20 min easy, with 4 × 1 min at race effort.","Practise one start."],tot:"20 min"},
-  brick:{t:"45+10",u:"min",s:"short and sharp",st:["Ride 45 min easy, with 2 × 5 min at race effort.","Run 10 min off the bike, the first 5 min at 5k effort."],tot:"about 60 min"},
-  long:{km:8,s:"easy, last long run"}},
+  swimA:{t:"1,400",u:"m",s:"Technique, short",st:["400 m easy.","6 × 25 m drills.","6 × 50 m at race pace.","400 m easy."],tot:"40 min"},
+  bike:{t:"50",u:"min",s:"Easy ride with race-effort minutes",st:["Ride 50 min easy, with 4 × 2 min at race effort in the middle."],tot:"50 min"},
+  runq:{t:"4×1",u:"km",s:"Sharpener",st:["Run 10 min easy, then 3 strides.","4 × 1 km at 10k pace, with 2 min easy jogging between.","10 min easy."],tot:"about 45 min"},
+  swimB:{open:1,t:"25",u:"min",s:"Open water, easy",st:["Lifeguarded beach, with a buddy.","25 min easy, with 4 × 2 min at race effort.","Practise one start."],tot:"25 min"},
+  brick:{t:"75+15",u:"min",s:"short and sharp",st:["Ride 75 min easy, with 2 × 10 min at race effort.","Run 15 min off the bike, the first 5 min at 10k effort."],tot:"about 1 h 35"},
+  long:{km:10,s:"easy, last long run"}},
  {n:15,phase:"Race",pct:.60,sets:1,
   note:"Race week. Short, sharp and rested. Check the bike on Wednesday so there's time to fix anything.",
   swimA:{t:"20",u:"min",s:"Easy swim + 4 fast 25s",st:["Swim 20 min easy, with 4 × 25 m fast in the middle."],tot:"20 min"},
-  bike:{t:"30",u:"min",s:"Easy spin + 3 race-effort minutes",st:["Ride 30 min easy, with 3 × 1 min at race effort.","Check tyres, brakes and gears afterwards."],tot:"30 min"},
+  bike:{t:"40",u:"min",s:"Easy spin + 3 race-effort minutes",st:["Ride 40 min easy, with 3 × 1 min at race effort.","Check tyres, brakes and gears afterwards."],tot:"40 min"},
   runq:{t:"20",u:"min",s:"Easy jog + strides",st:["Jog 20 min easy, then 4 strides."],tot:"25 min"},
   swimB:{open:1,t:"15",u:"min",s:"Easy swim, in the sea if you can",st:["15 min easy, with a buddy. A few strokes of sighting, then out."],tot:"15 min"}}];
 // Logged triathlon slots: [slot, label, unit, CSV category, planned day]
@@ -599,7 +620,7 @@ const TRI_PHASE={Recovery:"var(--green)",Base:"#a3a3a3",Build:"var(--amber)",Cut
 const TRI_SCHED=[
  ["Mon","Swim · technique","plus mobility","swimA","var(--sky)"],
  ["Tue","Strength","one full-body session","lift","var(--amber)"],
- ["Wed","Bike · easy","easy ride","bike","var(--green)"],
+ ["Wed","Bike","endurance ride","bike","var(--green)"],
  ["Thu","Run","the hard run, with your friend","runq","var(--sky)"],
  ["Fri","Swim","swim fitness","swimB","var(--sky)"],
  ["Sat","Brick","ride, then run off the bike","brick","var(--red)"],
@@ -613,7 +634,7 @@ function triSched(n){var w=TRI_WEEKS[n-1],last=n===TRI_WEEKS.length;return TRI_S
   if(s[0]==="Fri"&&w.swimB.open)return ["Fri","Swim · open water","with a buddy","swimB","var(--sky)"];
   if(s[0]==="Sat"&&last)return ["Sat","Rest","pack the bag, check the bike",null,"var(--ink4)"];
   if(s[0]==="Sat"&&w.brick.title)return ["Sat",w.brick.title,w.brick.s,"brick",w.brick.title==="Race rehearsal"?"var(--red)":"var(--green)"];
-  if(s[0]==="Sun"&&last)return ["Sun","RACE — MetaSprint","sprint triathlon","long","var(--red)"];
+  if(s[0]==="Sun"&&last)return ["Sun","RACE — MetaSprint XL","1.5 / 40 / 10","long","var(--red)"];
   return s;});}
 const TRI_MAINS=[MAINS[0],MAINS[1],OHP,MAINS[2]];
 const TRI_ACC=[
@@ -630,15 +651,15 @@ const TRI_HOW={
    drills:"Catch-up: one hand waits out in front until the other arrives. Fingertip drag: drag your fingertips along the surface as the arm comes forward, keeping the elbow high. Side kick: on your side, bottom arm stretched forward, kick and breathe — it teaches balance."},
  bike:{feel:"Easy means full sentences. Tempo is moderately hard: short sentences, steady. High cadence is quick, light legs, not hard pushing.",
    why:"Builds your aerobic engine with almost no impact, so your legs recover from running while you get fitter. A stationary or spin bike is fine for this one."},
- runq:{feel:"5k effort: hard, a word or two. 10k pace: hard but controlled. Every rep the same pace — if the last one is much slower, you started too fast.",
-   why:"Your one hard run of the week, with your friend. The 5 km in a sprint triathlon is run close to 5k effort on tired legs, and this is where that speed comes from."},
- swimB:{feel:"Race pace is strong but steady, the pace you could hold for 750 m. Every rep should be the same pace.",
-   why:"Repeats at race pace with short rests teach you to hold your 750 m pace. From week 10 it moves to the sea, because open water — waves, no wall, no black line — is a different skill from pool swimming."},
+ runq:{feel:"10k effort: hard but controlled, a few words at a time. Every rep the same pace — if the last one is much slower, you started too fast.",
+   why:"Your one hard run of the week, with your friend. The 10 km at the end of the race is run close to 10k effort on tired legs, and this is where that pace comes from. If the knee isn't right, run it easy instead."},
+ swimB:{feel:"Race pace is strong but steady, the pace you could hold for the whole 1.5 km. Every rep should be the same pace.",
+   why:"Repeats at race pace with short rests teach you to hold your race pace. From week 9 it moves to the sea, because open water — waves, no wall, no black line — is a different skill from pool swimming."},
  brick:{feel:RE+" The first few minutes of the run will feel heavy and strange; short, quick steps, and it settles.",
-   why:"Your key session of the week. Running straight after riding feels awkward for everyone; practising it makes the race's bike-to-run change familiar, and the bike efforts build the leg strength the 20 km needs."},
+   why:"Your key session of the week. Running straight after riding feels awkward for everyone; practising it makes the race's bike-to-run change familiar, and the long ride builds the endurance the 40 km needs."},
  long:{feel:"Conversational the whole way.",
-   why:"Keeps the endurance from your half-marathon block while you train for a 5 km run. It stays short and easy so it doesn't take energy from the brick or the Thursday run."}};
-const TRI_RACE_HOW={steps:["Rack your bike early and lay out transition: helmet on the bars, shoes, race belt, towel. Walk the route from the swim exit to your bike and from your bike to the run exit.","Warm up with 5 min easy jogging and a few minutes of easy swimming if it's allowed.","Swim: start at the side or the back, settle into your rhythm, and sight every 6–8 strokes. Don't race the first 100 m.","Bike: helmet on and buckled before you touch the bike. Ease in for 2–3 min, then hold race effort. Drink early.","Run: short, quick steps for the first kilometre while your legs come round, then 5k effort to the finish."],
+   why:"Keeps the endurance from your half-marathon block and builds toward the 10 km. It stays easy so it doesn't take energy from the brick or the Thursday run."}};
+const TRI_RACE_HOW={steps:["Rack your bike early and lay out transition: helmet on the bars, shoes, race belt, towel. Walk the route from the swim exit to your bike and from your bike to the run exit.","Warm up with 5 min easy jogging and a few minutes of easy swimming if it's allowed.","Swim: start at the side or the back, settle into your rhythm, and sight every 6–8 strokes. Don't race the first 100 m.","Bike: helmet on and buckled before you touch the bike. Ease in for 2–3 min, then hold race effort. Drink every 15 min and take a gel around 30 and 60 min. Keep an eye on the clock: 38 km within 2 h 05 of your start.","Run: short, quick steps for the first kilometre while your legs come round, then settle into 10k effort and push from 7 km."],
   feel:"Controlled in the water, strong on the bike, and everything you have left on the run.",
   why:"Fifteen weeks of work. Swim smooth, ride steady, run hard."};
 const TRI_LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big 3 (curl-up, side plank, bird dog).","Do the ramp sets before each main lift's working sets.","Squat and bench: work up to one top set of 3 that leaves about two reps in the tank, then the lighter back-off sets of 5.","Rest 2–3 min between sets of the main lifts and 60–90 s between accessory sets.","Never go to failure: end every set with 1–2 good reps left.","Nordics: start with 2 × 3 if 5 is too many; most of the benefit comes from lowering slowly."],
@@ -1122,6 +1143,7 @@ function importCSV(text){
 function cfHTML(){
   var key=S.week+":cf",lg=S.runs[key]||{},day=dispDay(S.week,"Fri");
   return '<div class="run"><div class="rtop"><div><div class="rname">'+day+' · CrossFit</div><div class="rspec">class</div></div></div>'+
+    (kneeWeek(S.week)?'<div class="rnote">Knee: skip the jumping, running and heavy squats until it\'s been checked. Upper body, rower and bike are fine.</div>':'')+
     '<div class="logrow"><span class="setn">min</span><input inputmode="numeric" placeholder="min" data-run="'+key+'" data-f="min" value="'+(lg.min!=null?esc(lg.min):'')+'">'+
     '<span class="setn">WOD</span><input inputmode="text" placeholder="what you did" style="width:auto;flex:1;text-align:left;padding-left:8px" data-run="'+key+'" data-f="note" value="'+(lg.note!=null?esc(lg.note):'')+'"></div></div>';}
 function friHTML(){
@@ -1260,12 +1282,12 @@ function renderTri(){
   if(!last)cards.push(["Tue",triTueHTML()]);
   if(w.brick)cards.push(["Sat",brickHTML(w)]);
   if(w.long)cards.push(["Sun",runHTML("long",dispDay(tn,"Sun"),"Long run",w.long.km,"km",w.long.s,w.long.note||"","",null,tn,"",howHTML("t-long",{steps:["Run the whole distance at an easy, conversational pace.","Drink every 20–30 min — it's hot.","Go by feel, not pace."],feel:TRI_HOW.long.feel,why:TRI_HOW.long.why}))]);
-  if(last)cards.push(["Sun",runHTML("race",dispDay(tn,"Sun"),"RACE — MetaSprint","750+20+5","m · km · km","sprint triathlon","Log your finish time.","race",null,tn,"",howHTML("t-race",TRI_RACE_HOW))]);
+  if(last)cards.push(["Sun",runHTML("race",dispDay(tn,"Sun"),"RACE — MetaSprint XL","1.5+40+10","km","XL triathlon","Log your finish time.","race",null,tn,"",howHTML("t-race",TRI_RACE_HOW))]);
   cards.sort(function(a,b){return DAYS7.indexOf(dispDay(tn,a[0]))-DAYS7.indexOf(dispDay(tn,b[0]));});
   document.getElementById("app").innerHTML=
-  '<div class="eyebrow">Triathlon Block · MetaSprint</div>'+
+  '<div class="eyebrow">Triathlon Block · MetaSprint XL</div>'+
   '<h1>The Tri</h1>'+
-  '<p class="lead">Fifteen weeks from the half to the start line. Two swims, a ride, a brick, two runs and one gym day.</p>'+
+  '<p class="lead">Fifteen weeks from the half to the start line. Two swims, a ride, a long brick, two runs and one gym day.</p>'+
   '<div class="count"><div><div class="cdays">'+(d2r>0?d2r:0)+'</div><div class="clbl">'+(d2r>0?"days to go":d2r===0?"race day":"done")+'</div></div>'+
   '<div class="cright"><div class="crace">Sun 21 Mar · '+TRI.event+'</div><div class="cmeta">'+TRI.name+'</div><div class="cmeta">'+TRI.meta+'</div><div class="cmeta">'+TRI.tbc+'</div></div></div>'+
   rewardHTML()+
@@ -1281,21 +1303,21 @@ function renderTri(){
     (moveMap(tn)?'<button class="arrbtn" data-act="arrange-reset">Reset week</button>':'')+'</div>':'')+
   moveWarnings(tn).map(function(t){return '<div class="warnb">'+esc(t)+'</div>';}).join("")+
   '<div class="rnote" style="margin-top:12px">'+esc(w.note)+'</div>'+
-  schedHTML(weekRows(tn).map(function(r){return [r[0],r[1],r[2],null,null,r[4],r[5]];}),K()+":",isNow,td,last?"RACE — MetaSprint":false)+
+  schedHTML(weekRows(tn).map(function(r){return [r[0],r[1],r[2],null,null,r[4],r[5]];}),K()+":",isNow,td,last?"RACE — MetaSprint XL":false)+
   cards.map(function(c){return c[1];}).join("")+
   '<button class="copybtn" data-act="copyweek" data-lbl="Copy this week">Copy this week</button>'+
   '<div class="ref"><button data-act="ref">How this plan works<span>'+(S.ref?'▲':'▼')+'</span></button>'+
   (S.ref?'<div class="refbody">'+
     '<h4>The race</h4>'+
-    '<p>The MetaSprint Series triathlon at East Coast Park: a <span class="a">750 m sea swim, 20 km bike and 5 km run</span>. It\'s on <span class="a">Sun 21 Mar 2027</span>. The plan assumes the Sprint category; if you enter a different one, the distances and sessions need adjusting to match.</p>'+
+    '<p>The MetaSprint Series XL triathlon at East Coast Park on <span class="a">Sun 21 Mar 2027</span>: a <span class="a">1.5 km sea swim, 40 km bike and 10 km run</span>. There is a bike cut-off: you need to reach 38 km within <span class="a">2 h 05</span> of your start, or you are stopped. With a 35–45 min swim, that means riding at about 27–28 km/h or faster. The week 11 brick and the week 13 rehearsal both time a 40 km ride so you know where you stand.</p>'+
     '<h4>Built for you</h4>'+
-    '<p>Your half-marathon block gives you a strong running engine, so the run stays at two sessions: the hard one on Thursday with your friend, and an easy long run with the group on Sunday. The swim and the bike are where the time is: two swims and two rides a week, with technique first. Strength keeps its Tuesday slot (or a CrossFit class if you prefer), with exercises chosen for your strain history. Wednesday\'s ride can be on a spin or stationary bike; the Saturday bricks from week 6 and the week 13 rehearsal are best done outside on the bike you\'ll race.</p>'+
+    '<p>Your half-marathon block gives you a strong running engine, so the run stays at two sessions: the hard one on Thursday with your friend, and an easy long run with the group on Sunday. The swim and the bike are where the time is: two swims and two rides a week, with technique first. Strength keeps its Tuesday slot (or a CrossFit class if you prefer), with exercises chosen for your strain history. Wednesday\'s ride can be on a spin or stationary bike; the long Saturday bricks, and especially the timed 40 km rides in weeks 11 and 13, need to be outside on the bike you\'ll race. A road bike makes the cut-off far more comfortable.</p>'+
     '<h4>Easy most of the time</h4>'+
     '<p>Only <span class="a">Thursday and Saturday</span> are hard. Everything else is genuinely easy. In studies of endurance athletes, including recreational triathletes, spending about 80% of training at low intensity and keeping the hard work for a couple of sessions gave equal or better results than lots of moderately hard training. Easy days are what let the hard days be good.</p>'+
     '<h4>Swim technique first</h4>'+
-    '<p>For newer triathletes, the swim is limited by technique more than fitness, so Monday is drills while you are fresh and Friday is the fitness set. The 750 m time trials in weeks 5 and 8 give you your race pace. From week 10 Friday moves to the sea: waves, salt water, sighting and mass starts are skills a pool can\'t teach. <span class="a">Always swim open water with a buddy, at a lifeguarded beach, in daylight.</span></p>'+
+    '<p>For newer triathletes, the swim is limited by technique more than fitness, so Monday is drills while you are fresh and Friday is the fitness set. The 1,000 m time trials in weeks 5 and 8 give you your race pace. From week 9 Friday moves to the sea: waves, salt water, sighting and mass starts are skills a pool can\'t teach. <span class="a">Always swim open water with a buddy, at a lifeguarded beach, in daylight.</span></p>'+
     '<h4>Bricks</h4>'+
-    '<p>Running straight off the bike feels heavy and uncoordinated for the first few minutes. Practising it every week makes it familiar, and lets you rehearse the transition itself. Week 13 is the full rehearsal: 20 km and 5 km in race kit, on race-day food.</p>'+
+    '<p>Running straight off the bike feels heavy and uncoordinated for the first few minutes. Practising it every week makes it familiar, and lets you rehearse the transition itself. Week 13 is the rehearsal: 40 km on the bike and 8 km of running, in race kit, on race-day food. Fuelling matters at this distance: practise drinking and taking gels on every long ride.</p>'+
     '<h4>Strength</h4>'+
     '<p>Adding heavy, low-rep strength work to endurance training improves running and cycling economy, meaning less energy at the same pace, without adding bulk. December and January are when strength can build again. From February it drops to two sets so it doesn\'t eat into the bike and run. Two exercises are there for you specifically: <span class="a">Nordic hamstring curls</span> cut hamstring strains by about half in trials, and <span class="a">Copenhagen planks</span> cut groin problems. Calf raises protect the achilles, and band rotations protect the shoulder for swimming.</p>'+
     '<h4>Recovery, cutbacks and taper</h4>'+
@@ -1348,7 +1370,7 @@ function render(){
     :runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",(S.week===RACE_WEEK?w.lnote:"This week: "+w.lnote),(S.week===RACE_WEEK?"race":"key"),null,null,S.week===RACE_WEEK?"":indoorBtn("long"),howHTML(S.week===RACE_WEEK?"race":"long",S.week===RACE_WEEK?RACE_HOW:LONG_HOW)))+
   ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?(isIndoor(S.week,"quality")
       ?runHTML("quality",qDay(S.week)||"—",w.q.n+" · treadmill",w.q.s,"session","indoors, haze",QHOW[S.week].sum+" On the treadmill.","key inside",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,true),qExtra(S.week,true)))
-      :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session",(S.week===4?"cutback week, light speed work":S.week===RACE_WEEK?"race week tune-up":"the one hard run"),QHOW[S.week].sum,"key",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,false),qExtra(S.week,false)))):"")+
+      :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session",(kneeWeek(S.week)?"easy, flat route — knee":S.week===4?"cutback week, light speed work":S.week===RACE_WEEK?"race week tune-up":"the one hard run"),QHOW[S.week].sum,"key",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,false),qExtra(S.week,false)))):"")+
   (S.week>=BOX_END?xtHTML():"")+
   friHTML()+
 
@@ -1370,6 +1392,8 @@ function render(){
     '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of strength work: bridge walkouts, slow calf lowers and a foam-roller squeeze for the groin. That strength is what makes hamstrings, calves and groin harder to strain. It starts in week 3 and only needs a mat, a foam roller, a ball and a wall. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
     '<h4>After boxing</h4>'+
     '<p>Your boxing membership ends with the class on Tuesday 10 Nov, so that week strength moves to Wednesday. Squat lighter than usual (skip the top triple), because Thursday\'s intervals are the next day. Boxing was your easy mid-week aerobic session, so from week 8 <span class="a">Wednesday becomes 30–40 min of easy cycling or swimming</span>: the same job with no impact, and a head start on the triathlon. It isn\'t replaced with extra running. Fitness from new running takes several weeks to show, so adding it this close to the race brings injury risk and little benefit. Saturdays become rest days before the long run. From week 8 Friday is your weekly CrossFit class (switch it back to a swim any week you like); race week is an easy swim. Only <span class="a">two</span> sessions each week are hard: the quality run and the long run.</p>'+
+    '<h4>Your knee</h4>'+
+    '<p>From week 7 to race week there are <span class="a">no intervals, sprints or strides</span>: Thursday is an easy run on a flat route, and the squat drops its heavy top set and goes only as deep as feels solid. Fast running and sprints put the biggest twisting and braking loads through the knee; easy running keeps your fitness for the race. The long runs stay, because they are what the half needs. <span class="a">'+KNEE_STOP+'</span> A knee that feels like it might give way needs a physio or sports doctor to look at it, ideally before the long runs in weeks 8 and 9. A routine can\'t tell you why it\'s happening.</p>'+
     '<h4>The missed strength week</h4>'+
     '<p>Missing one week of lifting costs you nothing measurable; strength takes several weeks without training to start dropping. Week 7 lifts at a normal load (the runs are on a cutback that week) and nothing is doubled up to make up for it.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
