@@ -369,9 +369,11 @@ function weekRows(n){var plan=schedFor(n);return DAYS7.map(function(d){var src=s
   return [d,r[1],r[2],r[3],r[4],src];});}
 function swapDays(n,a,b){var m={};DAYS7.forEach(function(d){m[d]=srcAt(n,d);});var t=m[a];m[a]=m[b];m[b]=t;
   if(DAYS7.every(function(d){return m[d]===d;}))delete S.moves[n];else S.moves[n]=m;persist();}
-// Friday is a swim or CrossFit. A choice carries forward to later weeks until changed; race week is always a swim.
-// Race week starts as a swim unless that week is set explicitly.
-function friChoice(n){if(n===RACE_WEEK)return (S.fri&&S.fri[n])||"swim";for(var k=n;k>=1;k--){if(S.fri&&S.fri[k])return S.fri[k];}return "swim";}
+// Friday is a swim or CrossFit. A choice carries forward to later weeks until changed.
+// With boxing over, Friday starts as CrossFit from week 8 (the easy swim is on Wednesday); a choice made before
+// week 8 doesn't carry past it. Race week starts as a swim unless that week is set explicitly.
+function friChoice(n){if(n===RACE_WEEK)return (S.fri&&S.fri[n])||"swim";
+  for(var k=n;k>=(n>=BOX_END?BOX_END:1);k--){if(S.fri&&S.fri[k])return S.fri[k];}return n>=BOX_END?"cf":"swim";}
 function moveWarnings(n){
   if(!moveMap(n))return [];
   // In the triathlon block the long run is easy; the hard days are the Thursday run and the Saturday brick.
@@ -1367,7 +1369,7 @@ function render(){
     '<h4>Monday mobility</h4>'+
     '<p>Stretching on its own does not prevent injuries; the trials are clear on that. What it does do is improve range of motion and ease the tightness you feel, and for <span class="a">muscle strains</span> specifically there is some evidence it helps. So Monday mixes long holds for your tight areas with a few minutes of strength work: bridge walkouts, slow calf lowers and a foam-roller squeeze for the groin. That strength is what makes hamstrings, calves and groin harder to strain. It starts in week 3 and only needs a mat, a foam roller, a ball and a wall. Keep it gentle, because it is the day after your long run. Finishing every exercise ticks Monday off for you. If the same spot keeps getting hurt, have a physio assess it; a routine cannot find the cause.</p>'+
     '<h4>After boxing</h4>'+
-    '<p>Your boxing membership ends with the class on Tuesday 10 Nov, so that week strength moves to Wednesday. Squat lighter than usual (skip the top triple), because Thursday\'s intervals are the next day. Boxing was your easy mid-week aerobic session, so from week 8 <span class="a">Wednesday becomes 30–40 min of easy cycling or swimming</span>: the same job with no impact, and a head start on the triathlon. It isn\'t replaced with extra running. Fitness from new running takes several weeks to show, so adding it this close to the race brings injury risk and little benefit. Saturdays become rest days before the long run. Friday is still a swim or a CrossFit class, your call. Only <span class="a">two</span> sessions each week are hard: the quality run and the long run.</p>'+
+    '<p>Your boxing membership ends with the class on Tuesday 10 Nov, so that week strength moves to Wednesday. Squat lighter than usual (skip the top triple), because Thursday\'s intervals are the next day. Boxing was your easy mid-week aerobic session, so from week 8 <span class="a">Wednesday becomes 30–40 min of easy cycling or swimming</span>: the same job with no impact, and a head start on the triathlon. It isn\'t replaced with extra running. Fitness from new running takes several weeks to show, so adding it this close to the race brings injury risk and little benefit. Saturdays become rest days before the long run. From week 8 Friday is your weekly CrossFit class (switch it back to a swim any week you like); race week is an easy swim. Only <span class="a">two</span> sessions each week are hard: the quality run and the long run.</p>'+
     '<h4>The missed strength week</h4>'+
     '<p>Missing one week of lifting costs you nothing measurable; strength takes several weeks without training to start dropping. Week 7 lifts at a normal load (the runs are on a cutback that week) and nothing is doubled up to make up for it.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
