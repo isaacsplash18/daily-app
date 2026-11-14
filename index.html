@@ -312,6 +312,21 @@ const LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big 3 (
     total:"about "+Math.round(km*6.5)+" min"};});
 [7,8,9].forEach(function(n){WEEKS[n-1].lnote+=" Knee: pick a flat route. "+KNEE_STOP;});
 WEEKS[9].lnote+=" If the knee still feels unstable in race week, get it checked before you start.";
+// Strength was missed in weeks 6 and 7, so week 8 restarts lighter (70%, 2 sets) to avoid three weeks' worth of soreness at once.
+WEEKS[7].lp=.70;WEEKS[7].ls=2;
+// Knee weeks: any run can be swapped for a ride of about the same time (S.ride["week:slot"]), decided on the day.
+function rides(n,slot){return typeof n==="number"&&kneeWeek(n)&&!!(S.ride&&S.ride[n+":"+slot])&&!(slot==="long"&&n===RACE_WEEK);}
+function rideKm(n,slot){var w=WEEKS[n-1];return slot==="long"?w.long:parseFloat(w.q.s);}
+function rideMin(n,slot){return Math.max(30,Math.round(rideKm(n,slot)*6.5/10)*10);}
+const RIDE_HOW={steps:["Ride easy for the time shown — on the road or a stationary bike, whichever feels better on the knee.","Light gear and a quick, smooth pedal stroke. Avoid grinding big gears and steep climbs: heavy pushing loads the knee more than spinning does.","Check your saddle height: at the bottom of the stroke the knee should be only slightly bent. A saddle that's too low is a common cause of knee pain on the bike.","Drink every 15–20 min."],
+  feel:"Easy the whole way — full sentences. The knee should feel no worse during or after.",
+  why:"Cycling keeps your aerobic fitness for the race with far less impact and twisting through the knee than running. Swapping like for like in time keeps the training load about the same."};
+function rideBtn(slot){if(!kneeWeek(S.week)||(slot==="long"&&S.week===RACE_WEEK))return "";var on=rides(S.week,slot);
+  return '<div class="indoor"><button class="arrbtn'+(on?' on':'')+'" data-ride="'+slot+'">'+(on?'🏃 Back to the run':'🚲 Knee not right? Ride instead')+'</button></div>';}
+function rideCard(slot){var n=S.week,lg=slot==="long";
+  return runHTML(lg?"longride":"qride",lg?dispDay(n,"Sun"):qDay(n),"Ride instead of the "+(lg?"long run":"run"),rideMin(n,slot),"min easy","knee — no running today",
+    lg?"About the time the long run would have taken, on the bike. Easy and steady, and keep drinking.":"About the time the run would have taken, on the bike. Easy the whole way.",
+    lg?"key":"","km",null,rideBtn(slot),howHTML("ride",RIDE_HOW));}
 function qHow(n,indoor){var h=QHOW[n];if(!indoor)return h;
   return {sum:h.sum,feel:h.feel,why:h.why,total:h.total,
     steps:["On the treadmill: set a 1% incline"+(n===4?".":" and change the speed at the start of each faster section.")].concat(h.steps.filter(function(x){return !/^Walk back/.test(x);}).map(function(x){
@@ -434,6 +449,7 @@ function indoorBtn(slot){var on=isIndoor(S.week,slot);if(!on)return "";
   return '<div class="indoor"><button class="arrbtn'+(on?' on':'')+'" data-indoor="'+slot+'">'+(on?'☀ Back outdoors':'☁ Hazy? Move indoors')+'</button>'+
     '<a class="psi" href="https://www.haze.gov.sg/" target="_blank" rel="noopener">Check PSI</a></div>';}
 function schedFor(n){if(isTriN(n))return triSched(+n.slice(1));return schedPlan(n).map(function(r){
+  if((r[3]==="long"||r[3]==="quality")&&rides(n,r[3]))return [r[0],"Ride",r[3]==="long"?"instead of the long run — knee":"instead of the run — knee",r[3],"var(--green)"];
   if(r[3]==="long"&&isIndoor(n,"long"))return [r[0],r[1]+" — treadmill","indoors, haze","long",r[4]];
   if(r[3]==="quality"&&isIndoor(n,"quality"))return [r[0],"Quality run — treadmill","indoors, haze","quality",r[4]];
   if(r[3]==="swim"&&isIndoor(n,"swim"))return [r[0],"Indoor cardio","bike, elliptical or rower","cardio",r[4]];
@@ -677,10 +693,10 @@ const TRI_LIFT_HOW={steps:["Warm up: 5 min easy bike or row, then the McGill Big
 const DEFAULT={squat:90,bench:60,deadlift:100,ohp:36};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},fri:{},tue:{},indoor:{},how:{},ref:false,block:null,view:"new",oweek:8,tweek:1};
+let S={oneRMs:{...DEFAULT},week:1,logs:{},runs:{},travel:{},sessions:{},mob:{},moves:{},fri:{},tue:{},indoor:{},ride:{},how:{},ref:false,block:null,view:"new",oweek:8,tweek:1};
 try{const r=localStorage.getItem("ss_state");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 S.runs=S.runs||{};S.sessions=S.sessions||{};S.logs=S.logs||{};S.travel=S.travel||{};
-S.mob=S.mob||{};S.moves=S.moves||{};S.fri=S.fri||{};S.tue=S.tue||{};S.indoor=S.indoor||{};S.how=S.how||{};
+S.mob=S.mob||{};S.moves=S.moves||{};S.fri=S.fri||{};S.tue=S.tue||{};S.indoor=S.indoor||{};S.ride=S.ride||{};S.how=S.how||{};
 if(S.view!=="old"&&S.view!=="tri")S.view="new";S.tweek=Math.min(Math.max(Number(S.tweek)||1,1),TRI_WEEKS.length);S.oweek=Math.min(Math.max(Number(S.oweek)||8,1),12);
 function persist(){try{localStorage.setItem("ss_state",JSON.stringify(S));}catch(e){}}
 
@@ -862,7 +878,7 @@ function stats(){
   Object.keys(S.runs).forEach(function(k){var r=S.runs[k]||{};if(!(r.km||r.t||r.min||r.note))return;
     if(/:cf$/.test(k)){if(r.min||r.note)st.cf++;return;}
     if(/:(cardio|xt)$/.test(k)){st.cardio++;return;}
-    if(/:(bike|brick)$/.test(k)){st.rides++;st.bikeKm+=num(r.km);return;}
+    if(/:(bike|brick|longride|qride)$/.test(k)){st.rides++;st.bikeKm+=num(r.km);return;}
     if(/:swim[AB]?$/.test(k)){st.swims++;st.swimM+=num(r.km);}else{st.runs++;var d=num(r.km);st.km+=d;if(/:long$/.test(k)&&d>st.longest)st.longest=d;}});
   var liftKeys={};
   Object.keys(S.logs).forEach(function(k){var sets=(S.logs[k]||{}).sets||[];sets.forEach(function(x){if(!x||!fmtSet(x))return;st.sets++;var w=num(x.w),r=num(x.r);if(w&&r)st.kg+=w*r;
@@ -990,8 +1006,10 @@ function sessionText(){
   out+="\n"+daysToRace()+" days to "+RACE.event;
   out+="\n\nRUNS";
   var xl=ovr(S.week).extraLong;if(xl)out+=runLine("long",xl.day+" · Long run (moved from week "+xl.from+" Sun, haze; only if PSI is OK)",WEEKS[xl.from-1].long+" km",null,xl.from);
-  out+=runLine("long",(S.week===RACE_WEEK?"Sun · RACE":longDay(S.week)+" · Long run"+(isIndoor(S.week,"long")?" (treadmill)":"")),w.long+" km");
-  if(qDay(S.week)){out+=runLine("quality",qDay(S.week)+" · "+w.q.n+(isIndoor(S.week,"quality")?" on the treadmill":"")+" ("+w.q.s+")","quality");
+  if(rides(S.week,"long"))out+=runLine("longride",dispDay(S.week,"Sun")+" · Ride instead of the long run (knee)",rideMin(S.week,"long")+" min easy","km");
+  else out+=runLine("long",(S.week===RACE_WEEK?"Sun · RACE":longDay(S.week)+" · Long run"+(isIndoor(S.week,"long")?" (treadmill)":"")),w.long+" km");
+  if(qDay(S.week)&&rides(S.week,"quality"))out+=runLine("qride",qDay(S.week)+" · Ride instead of the run (knee)",rideMin(S.week,"quality")+" min easy","km");
+  else if(qDay(S.week)){out+=runLine("quality",qDay(S.week)+" · "+w.q.n+(isIndoor(S.week,"quality")?" on the treadmill":"")+" ("+w.q.s+")","quality");
     qHow(S.week,isIndoor(S.week,"quality")).steps.forEach(function(x,i){out+="\n    "+(i+1)+". "+x;});}else out+="\n  No quality run this week";
   if(S.week>=SWIM_THU){out+=runLine("swim",dispDay(S.week,"Thu")+" · Swim",(S.week===RACE_WEEK?"15–20":"30–40")+" min easy","m");
     if(S.week>=BOX_END&&S.week<RACE_WEEK){var c7=S.runs[S.week+":cf"]||{},cb7=[c7.min?c7.min+" min":"",c7.note||""].filter(Boolean);
@@ -1022,7 +1040,7 @@ function fullLogText(){
   var out="Hybrid Training — training log",found=false;
   for(var wk=1;wk<=WEEKS.length;wk++){
     var W=WEEKS[wk-1],ln="";
-    [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"],["cardio","Indoor cardio"],["cf","CrossFit"],["xt","Easy bike or swim"]].forEach(function(s){
+    [["long","Long run"],["quality","Quality"],["easy","Easy run"],["swim","Swim"],["cardio","Indoor cardio"],["cf","CrossFit"],["xt","Easy bike or swim"],["longride","Ride (instead of long run)"],["qride","Ride (instead of run)"]].forEach(function(s){
       var lg=S.runs[wk+":"+s[0]]||{},bits=[];if(s[0]==="cf"||s[0]==="xt"){if(lg.min)bits.push(lg.min+" min");if(lg.note)bits.push(lg.note);}
       if(lg.km)bits.push(lg.km+(s[0]==="swim"?" m":" km"));if(lg.t)bits.push(lg.t);
       if(bits.length)ln+="\n    "+s[1]+": "+bits.join(" / ");});
@@ -1059,9 +1077,9 @@ function buildCSV(){
   rows.push(["Meta","","","dates fixed (28 Sep)","","","","","","","shift28"]);
   RM_NAMES.forEach(function(m){rows.push(["Max","","",m[1],"",S.oneRMs[m[0]]==null?"":S.oneRMs[m[0]],"","","","",m[0]]);});
   for(var wk=1;wk<=WEEKS.length;wk++){
-    [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim",dispDay(wk,wk>=SWIM_THU?"Thu":"Fri")],["cardio","Indoor cardio",dispDay(wk,"Fri")]].forEach(function(s){
+    [["long","Long run",longDay(wk)],["quality","Quality",qDay(wk)||""],["easy","Easy run",""],["swim","Swim",dispDay(wk,wk>=SWIM_THU?"Thu":"Fri")],["cardio","Indoor cardio",dispDay(wk,"Fri")],["longride","Ride (instead of long run)",longDay(wk)],["qride","Ride (instead of run)",qDay(wk)||""]].forEach(function(s){
       var key=wk+":"+s[0],lg=S.runs[key]||{};
-      if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push([s[0]==="swim"?"Swim":s[0]==="cardio"?"Cardio":"Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
+      if((lg.km&&lg.km!=="")||(lg.t&&lg.t!==""))rows.push([s[0]==="swim"?"Swim":s[0]==="cardio"?"Cardio":/ride$/.test(s[0])?"Bike":"Run",wk,s[2],s[1],"","","",lg.km||"",lg.t||"","",key]);});
     mainsFor(wk).forEach(function(m){
       var key=BLOCK+wk+":"+m.k,sets=(S.logs[key]||{}).sets||[];
       sets.forEach(function(st,si){if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Lift",wk,liftDay(wk),m.name,si+1,st.w||"",st.r||"","","","",key]);});});
@@ -1084,6 +1102,7 @@ function buildCSV(){
     TRI_ACC.forEach(function(a,idx){var key=TBLOCK+tw+":acc:"+idx;((S.logs[key]||{}).sets||[]).forEach(function(st,si){
       if(st&&((st.w!=null&&st.w!=="")||(st.r!=null&&st.r!=="")))rows.push(["Accessory","T"+tw,dispDay(tn,TD.lift),a[0],si+1,st.w||"",st.r||"","","","",key]);});});}
   Object.keys(S.tue).forEach(function(wk){if(S.tue[wk])rows.push(["Tuesday","T"+wk,"",S.tue[wk]==="cf"?"CrossFit":"Strength","","","","","","",wk+":tue"]);});
+  Object.keys(S.ride).forEach(function(k){if(S.ride[k]){var p=k.split(":");rows.push(["Ride",p[0],"",p[1],"","","","","","yes",k]);}});
   Object.keys(S.indoor).forEach(function(k){if(S.indoor[k]){var p=k.split(":");rows.push(["Indoor",p[0],"",p[1],"","","","","","yes",k]);}});
   Object.keys(S.fri).forEach(function(wk){if(S.fri[wk])rows.push(["Friday",wk,"",S.fri[wk]==="cf"?"CrossFit":"Swim","","","","","","",wk+":fri"]);});
   Object.keys(S.moves).forEach(function(wk){var m=S.moves[wk]||{};DAYS7.forEach(function(d){if(m[d]&&m[d]!==d)rows.push(["Move",wk,d,m[d],"","","","","","",wk+":"+d]);});});
@@ -1117,7 +1136,7 @@ function importCSV(text){
   var head=rows[0].map(function(h){return h.trim().toLowerCase();}),ci={};
   ["category","week","day","item","set","weight","reps","distance","time","done","key"].forEach(function(n){ci[n]=head.indexOf(n);});
   if(ci.category<0||ci.key<0)return false;
-  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nFri={},nTue={},nIndoor={},nRMs=Object.assign({},S.oneRMs),fixed=false;
+  var nLogs={},nRuns={},nSess={},nTrav={},nMob={},nMoves={},nFri={},nTue={},nIndoor={},nRide={},nRMs=Object.assign({},S.oneRMs),fixed=false;
   var g=function(r,n){return ci[n]>=0?(r[ci[n]]||"").trim():"";};
   for(var i=1;i<rows.length;i++){
     var r=rows[i];if(!r||!r.length||r.every(function(x){return(x||"").trim()==="";}))continue;
@@ -1132,13 +1151,14 @@ function importCSV(text){
     else if(cat==="Mobility"){if(key)nMob[key]=true;}
     else if(cat==="CrossFit"||cat==="Easy cardio"){if(!key)continue;var cm=g(r,"time"),cn=g(r,"item");nRuns[key]={};if(cm!=="")nRuns[key].min=cm;if(cn!=="")nRuns[key].note=cn;}
     else if(cat==="Indoor"){if(key)nIndoor[key]=true;}
+    else if(cat==="Ride"){if(key)nRide[key]=true;}
     else if(cat==="Tuesday"){var tw2=key.split(":")[0];if(tw2)nTue[tw2]=g(r,"item")==="CrossFit"?"cf":"lift";}
     else if(cat==="Friday"){var fw=key.split(":")[0];if(fw)nFri[fw]=g(r,"item")==="CrossFit"?"cf":"swim";}
     else if(cat==="Move"){var mp=key.split(":"),it2=g(r,"item");if(mp.length===2&&DAYS7.indexOf(mp[1])>=0&&DAYS7.indexOf(it2)>=0){(nMoves[mp[0]]=nMoves[mp[0]]||{})[mp[1]]=it2;}}
     else if(cat==="Travel"){if(key)nTrav[key]=true;}
     else if(cat==="Meta"){if(key==="shift28")fixed=true;}
   }
-  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;S.fri=nFri;S.tue=nTue;S.indoor=nIndoor;
+  S.oneRMs=nRMs;S.logs=nLogs;S.runs=nRuns;S.sessions=nSess;S.travel=nTrav;S.mob=nMob;S.fri=nFri;S.tue=nTue;S.indoor=nIndoor;S.ride=nRide;
   Object.keys(nMoves).forEach(function(wk){DAYS7.forEach(function(d){if(!nMoves[wk][d])nMoves[wk][d]=d;});});S.moves=nMoves;
   // A file from the old app (before the date fix) still has the haze-period weeks one ahead: fix them the same way.
   delete S.shiftNote;
@@ -1379,12 +1399,12 @@ function render(){
   schedHTML(weekRows(S.week).map(function(r){return [r[0],r[1],r[2],null,null,r[4],r[5]];}),K()+":",isNow,td,S.week===RACE_WEEK)+
 
   (ovr(S.week).extraLong?(function(e){var pw=WEEKS[e.from-1];return runHTML("long",dispDay(S.week,e.day),"Long run (moved from Sun, haze)",pw.long,"km","week "+e.from+"'s long run, easy",ovr(S.week).longNote,"key",null,e.from);})(ovr(S.week).extraLong):"")+
-  (isIndoor(S.week,"long")
+  (rides(S.week,"long")?rideCard("long"):isIndoor(S.week,"long")
     ?runHTML("long",dispDay(S.week,"Sun"),"Long run · treadmill",w.long,"km","indoors, haze","Treadmill, same distance, same easy effort. This week: "+w.lnote,"key inside",null,null,indoorBtn("long"),howHTML("long",LONG_IN_HOW))
-    :runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",(S.week===RACE_WEEK?w.lnote:"This week: "+w.lnote),(S.week===RACE_WEEK?"race":"key"),null,null,S.week===RACE_WEEK?"":indoorBtn("long"),howHTML(S.week===RACE_WEEK?"race":"long",S.week===RACE_WEEK?RACE_HOW:LONG_HOW)))+
-  ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?(isIndoor(S.week,"quality")
+    :runHTML("long",(ovr(S.week).longDay?"Wed":dispDay(S.week,"Sun")),(S.week===RACE_WEEK?"RACE — BYD Half":(ovr(S.week).longTitle||"Long run")),w.long,"km","easy, conversational",(S.week===RACE_WEEK?w.lnote:"This week: "+w.lnote),(S.week===RACE_WEEK?"race":"key"),null,null,S.week===RACE_WEEK?"":indoorBtn("long")+rideBtn("long"),howHTML(S.week===RACE_WEEK?"race":"long",S.week===RACE_WEEK?RACE_HOW:LONG_HOW)))+
+  ((qDay(S.week)||(S.runs[S.week+":quality"]||{}).km||(S.runs[S.week+":quality"]||{}).t)?(rides(S.week,"quality")?rideCard("quality"):isIndoor(S.week,"quality")
       ?runHTML("quality",qDay(S.week)||"—",w.q.n+" · treadmill",w.q.s,"session","indoors, haze",QHOW[S.week].sum+" On the treadmill.","key inside",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,true),qExtra(S.week,true)))
-      :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session",(kneeWeek(S.week)?"easy, flat route — knee":S.week===4?"cutback week, light speed work":S.week===RACE_WEEK?"race week tune-up":"the one hard run"),QHOW[S.week].sum,"key",null,null,indoorBtn("quality"),howHTML("quality",qHow(S.week,false),qExtra(S.week,false)))):"")+
+      :runHTML("quality",qDay(S.week)||"—",w.q.n,w.q.s,"session",(kneeWeek(S.week)?"easy, flat route — knee":S.week===4?"cutback week, light speed work":S.week===RACE_WEEK?"race week tune-up":"the one hard run"),QHOW[S.week].sum,"key",null,null,indoorBtn("quality")+rideBtn("quality"),howHTML("quality",qHow(S.week,false),qExtra(S.week,false)))):"")+
   (S.week>=SWIM_THU?thuSwimHTML()+(S.week>=BOX_END&&S.week<RACE_WEEK?cfHTML():""):friHTML())+
 
   mobHTML()+
@@ -1406,7 +1426,9 @@ function render(){
     '<h4>After boxing</h4>'+
     '<p>Your boxing membership ends with the class on Tuesday 10 Nov, so that week strength moves to Wednesday, with lighter squats. Your swim is now always on Thursday, so the midweek easy run moves to Friday in week 7 and to Wednesday from week 8. From week 8 the week is: mobility Monday, strength Tuesday, easy run Wednesday, <span class="a">swim Thursday, CrossFit Friday</span>, rest Saturday and the long run Sunday. Race week drops the CrossFit and rests on Friday and Saturday. Boxing isn\'t replaced with extra running: fitness from new running takes several weeks to show, so adding it this close to the race brings injury risk and little benefit. Only <span class="a">one</span> session each week is hard now, the long run, while the knee settles.</p>'+
     '<h4>Your knee</h4>'+
-    '<p>From week 7 to race week there are <span class="a">no intervals, sprints or strides</span>: the midweek run is easy, on a flat route, and the squat drops its heavy top set and goes only as deep as feels solid. Fast running and sprints put the biggest twisting and braking loads through the knee; easy running keeps your fitness for the race. The long runs stay, because they are what the half needs. <span class="a">'+KNEE_STOP+'</span> A knee that feels like it might give way needs a physio or sports doctor to look at it, ideally before the long runs in weeks 8 and 9. A routine can\'t tell you why it\'s happening.</p>'+
+    '<p>From week 7 to race week there are <span class="a">no intervals, sprints or strides</span>: the midweek run is easy, on a flat route, and the squat drops its heavy top set and goes only as deep as feels solid. Fast running and sprints put the biggest twisting and braking loads through the knee; easy running keeps your fitness for the race. The long runs stay, because they are what the half needs. <span class="a">'+KNEE_STOP+'</span> A knee that feels like it might give way needs a physio or sports doctor to look at it, ideally before the long runs in weeks 8 and 9. A routine can\'t tell you why it\'s happening. On any day the knee isn\'t right, tap <b>Ride instead</b> on a run: you get an easy ride of about the same time, which keeps your fitness with far less load through the knee. Keep the gears light and check your saddle height, because a low saddle is a common cause of knee pain on the bike.</p>'+
+    '<h4>Strength after two missed weeks</h4>'+
+    '<p>Week 8 restarts at 70% for 2 sets rather than jumping back to full loads. After three weeks off, that is enough to keep your strength without leaving you sore for the long run. Upper body as normal; for the legs, do the Romanian deadlift and squat only if they feel solid on the knee.</p>'+
     '<h4>The missed strength week</h4>'+
     '<p>Missing one week of lifting costs you nothing measurable; strength takes several weeks without training to start dropping. Week 7 lifts at a normal load (the runs are on a cutback that week) and nothing is doubled up to make up for it.</p>'+
     '<h4>Cutback and taper weeks</h4>'+
@@ -1460,6 +1482,7 @@ app.addEventListener("click",function(e){
   else if(b.dataset.act==="shift-ok"){delete S.shiftNote;persist();render();}
   else if(b.dataset.act==="shift-undo"){if(confirm("Put your logs back where they were (one week ahead)?")){if(!undoShift())alert("No backup found.");render();}}
   else if(b.dataset.how){var hid=b.dataset.how;if(S.how[hid])delete S.how[hid];else S.how[hid]=true;persist();render();}
+  else if(b.dataset.ride){var rk=S.week+":"+b.dataset.ride;if(S.ride[rk])delete S.ride[rk];else S.ride[rk]=true;persist();render();}
   else if(b.dataset.indoor){var ik=S.week+":"+b.dataset.indoor;if(S.indoor[ik])delete S.indoor[ik];else S.indoor[ik]=true;persist();render();}
   else if(b.dataset.fri){S.fri[S.week]=b.dataset.fri;persist();render();}
   else if(b.dataset.tue){S.tue[S.tweek]=b.dataset.tue;persist();render();}
